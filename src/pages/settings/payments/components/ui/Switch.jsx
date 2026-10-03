@@ -1,18 +1,25 @@
 import React, { useState } from "react";
 
-export function Switch({ checked: externalChecked, onChange, disabled = false }) {
+export function Switch({
+  checked: externalChecked,
+  onChange,
+  disabled = false,
+}) {
   const [internalChecked, setInternalChecked] = useState(false);
-  const isChecked = externalChecked !== undefined ? externalChecked : internalChecked;
+
+  const isChecked =
+    externalChecked !== undefined ? externalChecked : internalChecked;
 
   const handleToggle = () => {
     if (disabled) return;
+
     const newCheckedState = !isChecked;
+
     if (externalChecked === undefined) {
       setInternalChecked(newCheckedState);
     }
-    if (onChange) {
-      onChange(newCheckedState);
-    }
+
+    onChange?.(newCheckedState);
   };
 
   return (
@@ -22,12 +29,29 @@ export function Switch({ checked: externalChecked, onChange, disabled = false })
       aria-checked={isChecked}
       disabled={disabled}
       onClick={handleToggle}
-      className={`relative inline-flex h-3 w-[28px] h-[15px] shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${isChecked ? "bg-green-800" : "bg-gray-300"
-        }`}
+      className={`
+        relative inline-flex
+        h-[15px] w-[28px]
+        shrink-0 items-center
+        rounded-full p-0
+        transition-colors duration-200 ease-in-out
+        focus:outline-none
+        disabled:cursor-not-allowed disabled:opacity-50
+        ${isChecked ? "bg-green-800" : "bg-gray-300"}
+      `}
     >
       <span
-        className={`pointer-events-none inline-block size-[10px] transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${isChecked ? "translate-x-[15px]" : "translate-x-[3px]"
-          }`}
+        className={`
+          pointer-events-none
+          absolute
+          top-[2.5px] left-[2.5px]
+          size-[10px]
+          rounded-full
+          bg-white
+          shadow-sm
+          transition-transform duration-200 ease-in-out
+          ${isChecked ? "translate-x-[13px]" : "translate-x-0"}
+        `}
       />
     </button>
   );
