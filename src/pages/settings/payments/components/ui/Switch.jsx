@@ -35,7 +35,7 @@ export function Switch({
         shrink-0 items-center
         rounded-full p-0
         transition-colors duration-200 ease-in-out
-        focus:outline-none
+        focus:outline-none cursor-pointer
         disabled:cursor-not-allowed disabled:opacity-50
         ${isChecked ? "bg-green-800" : "bg-gray-300"}
       `}
