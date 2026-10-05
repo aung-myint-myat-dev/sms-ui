@@ -15,7 +15,7 @@ export function Button({
     "inline-flex items-center justify-center font-medium transition-colors outline-none disabled:opacity-50 disabled:pointer-events-none rounded-[8px] font-roboto font-semibold cursor-pointer";
 
   const variants = {
-    primary: "bg-[#228B22] active:bg-[#29A829] text-white hover:bg-green-700 focus:ring-green-500",
+    primary: "bg-theme active:bg-[#29A829] text-white hover:bg-green-700 focus:ring-green-500",
     secondary: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 focus:ring-zinc-400",
     outline: "border border-[#228B22] bg-transparent text-[#228B22] hover:bg-[#EAFAEA]",
     danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",

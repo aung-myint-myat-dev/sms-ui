@@ -1,33 +1,36 @@
 import { Pencil } from "lucide-react";
 import { Switch } from "./ui/Switch";
+import { useState } from "react";
 
 export function PaymentMethodCard({ data = {}, onEdit }) {
   const {
-    provider_name = "",
-    type = "wallet",
-    account_name = "",
-    phone_number = "",
-    account_number = "",
-    is_active = false,
+    payment_system,
+    payment_name,
+    account_holder_name,
+    phone_number,
+    account_number,
+    is_active,
   } = data;
+  const [ isActive, setIsActive ] = useState(is_active);
 
-  const displayNumber = type === "wallet" ? phone_number : account_number;
+  const displayNumber = payment_system === "mobile_wallet" ? phone_number : account_number;
 
   return (
-    <div className="w-full max-w-[225px] h-[70px] border border-[#0000004D] rounded-[8px] p-2.5 flex flex-col justify-between bg-white">
+    <div className="w-full max-w-[225px] h-[78px] border border-[#0000004D] rounded-[8px] p-2.5 flex flex-col justify-between bg-white">
+      
       {/* Payment Name and Switch */}
       <div className="flex items-center justify-between">
-        <h2 className="text-[14px] font-semibold font-roboto">{provider_name}</h2>
-        <Switch/>
+        <h2 className="text-[14px] font-semibold font-roboto">{payment_name}</h2>
+        <Switch checked={isActive} onChange={() => setIsActive(!isActive)}/>
       </div>
 
       {/* Name, Phone Number / Account Number, Edit Button */}
       <div className="flex items-center justify-between gap-2">
         <div className="truncate min-w-0">
-          <h2 className="text-[12px] font-semibold font-roboto truncate" title={account_name}>
-            {account_name}
+          <h2 className="text-[12px] font-semibold font-roboto truncate" title={account_holder_name}>
+            {account_holder_name}
           </h2>
-          <p className="text-[10px] font-semibold font-roboto text-gray-600 truncate">
+          <p className="text-[12px] mt-0.5 font-semibold font-roboto text-gray-600 truncate">
             {displayNumber}
           </p>
         </div>

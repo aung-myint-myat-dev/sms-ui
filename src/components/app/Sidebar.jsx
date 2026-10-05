@@ -46,7 +46,7 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-[223px] h-full bg-[#228B22] text-white flex flex-col justify-between p-3 select-none">
+    <aside className="w-[223px] h-full bg-theme text-white flex flex-col justify-between p-3 select-none">
       {/* Top Header / Logo Section */}
       <div>
         <div className="flex items-center gap-3 p-2 border-b border-green-600/60 pb-3 mb-2">
