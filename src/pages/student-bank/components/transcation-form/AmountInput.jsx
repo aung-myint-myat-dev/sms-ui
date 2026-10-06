@@ -1,0 +1,39 @@
+export function AmountInput({
+  enable,
+  value,
+  onChange,
+  error,
+}) {
+  return (
+    <div className="relative rounded-sm border p-2 shadow-xs">
+      <label
+        htmlFor="amount-input"
+        className={`absolute -top-2 left-2 bg-white px-2 text-xs font-semibold ${
+          enable ? "text-zinc-700" : "text-zinc-300"
+        }`}
+      >
+        Amount
+      </label>
+
+      <input
+        disabled={!enable}
+        id="amount-input"
+        type="number"
+        value={value}
+        name="amount"
+        onChange={onChange}
+        placeholder="Enter amount"
+        className={`h-full w-full bg-transparent text-sm outline-none ${
+          enable ? "text-zinc-700" : "text-zinc-300"
+        }`}
+      />
+
+      {error && (
+        <span className="absolute -bottom-2 right-2 bg-white px-2 text-xs text-red-500">
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
+
