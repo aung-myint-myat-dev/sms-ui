@@ -6,9 +6,8 @@ export function CashMethodCard() {
 
       <div className="w-full flex items-center justify-between">
         <h2>Cash</h2>
-        <Switch/>
+        <Switch checked={true} disabled/>
       </div>
-
     </div>
   )
 }
