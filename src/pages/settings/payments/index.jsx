@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "./components/ui/Button";
 import { PaymentMethodCard } from "./components/PaymentMethodCard";
 import { PaymentSystemRadio } from "./components/PaymentSystemRadio";
@@ -12,43 +12,46 @@ import {
   ModalTitle,
 } from "./components/ui/Modal";
 import { methods } from "./data/payment-methods";
+import { api } from "../../../lib/api";
+import { handleFormErrors } from "../../../lib/handle-form-errors";
 const FORM_STEP = {
   NONE: "",
-  SYSTEM_CHOOSE: "system_choose",
+  TYPE_CHOOSE: "type_choose",
   FORM: "form",
 };
 const emptyForm = {
-  payment_system: "",
+  type: "",
   payment_name: "",
-  account_holder_name: "",
+  account_name: "",
   phone_number: "",
   account_number: "",
-  is_active: false,
 };
+
 const emptyError = {
-  payment_system: "",
+  type: "",
   payment_name: "",
-  account_holder_name: "",
+  account_name: "",
   phone_number: "",
   account_number: "",
 };
 
 export function Payments() {
+  const [payments, setPayments] = useState([]);
   const [paymentFormStep, setPaymentFormStep] = useState(FORM_STEP.NONE);
   const [isEdit, setIsEdit] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [formData, setFormData] = useState({ ...emptyForm });
   const [errors, setErrors] = useState({ ...emptyError });
 
-  const mobileWallets = methods.filter( (method) => method.payment_system === "mobile_wallet" );
-  const bankings = methods.filter( (method) => method.payment_system === "banking" );
+  const mobilePayments = payments.filter((payment) => payment.type === 'mobile')
+  const bankingPayments = payments.filter((payment) => payment.type === 'banking')
 
   const openCreateForm = () => {
     setIsEdit(false);
     setSelectedPayment(null);
     setFormData({ ...emptyForm });
     setErrors({ ...emptyError });
-    setPaymentFormStep(FORM_STEP.SYSTEM_CHOOSE);
+    setPaymentFormStep(FORM_STEP.TYPE_CHOOSE);
   };
 
   const openEditForm = (payment) => {
@@ -74,7 +77,7 @@ export function Payments() {
   };
 
   const previousStep = () => {
-    setPaymentFormStep(FORM_STEP.SYSTEM_CHOOSE);
+    setPaymentFormStep(FORM_STEP.TYPE_CHOOSE);
   };
 
   const handleChange = (e) => {
@@ -92,26 +95,26 @@ export function Payments() {
   const validateForm = (form) => {
     const newErrors = {};
 
-    if (!form.payment_system.trim()) {
-      newErrors.payment_system = "Payment system is required.";
+    if (!form.type.trim()) {
+      newErrors.type = "Payment system is required.";
     }
 
     if (!form.payment_name.trim()) {
       newErrors.payment_name = "Payment name is required.";
     }
 
-    if (!form.account_holder_name.trim()) {
-      newErrors.account_holder_name =
+    if (!form.account_name.trim()) {
+      newErrors.account_name =
         "Account holder name is required.";
     }
 
-    if (form.payment_system === "mobile_wallet") {
+    if (form.type === "mobile") {
       if (!form.phone_number.trim()) {
         newErrors.phone_number = "Phone number is required.";
       }
     }
 
-    if (form.payment_system === "banking") {
+    if (form.type === "banking") {
       if (!form.account_number.trim()) {
         newErrors.account_number = "Account number is required.";
       }
@@ -125,31 +128,59 @@ export function Payments() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const submitPaymentForm = (e) => {
+  const fetchPayments = async () => {
+    try {
+      const res = await api.get('payments')
+      const data = res.data.data
+      if (data) {
+        setPayments(data)
+      }
+    } catch (error) {
+      console.log("fetching payments error: ", error)
+    }
+  }
+
+  const submitPaymentForm = async (e) => {
     e.preventDefault();
     if (!validateForm(formData)) { return; }
 
-    if (isEdit && selectedPayment) {
-      const method = methods.find(
-        (item) => item.id === selectedPayment.id
-      );
+    if (formData.type === 'mobile') {
+      setFormData((prev) => ({
+        ...prev,
+        account_number: null,
+      }))
+    }
+    if (formData.type === 'banking') {
+      setFormData((prev) => ({
+        ...prev,
+        phone_number: null,
+      }))
+    }
 
-      if (method) {
-        Object.assign(method, formData);
+    if (isEdit && selectedPayment) {
+      try {
+        await api.put(`payments/${selectedPayment.id}`, formData)
+        await fetchPayments()
+        closeForm();
+      } catch (error) {
+        handleFormErrors(error, setErrors)
+        console.log("update payment error: ", error)
+      }
+    } else {
+      try {
+        await api.post('payments', formData)
+        await fetchPayments()
+        closeForm();
+      } catch (error) {
+        handleFormErrors(error, setErrors)
+        console.log("store payment error: ", error)
       }
     }
-
-    else {
-      methods.push({
-        ...formData,
-        id: Date.now(),
-      });
-    }
-
-    console.log("Methods:", methods);
-
-    closeForm();
   };
+
+  useEffect(() => {
+    fetchPayments()
+  }, [])
 
   return (
     <div className="p-6 h-full flex flex-col font-roboto">
@@ -192,7 +223,7 @@ export function Payments() {
                 Mobile Wallets
               </h2>
               <div className="grid grid-cols-4 gap-8">
-                {mobileWallets.map((wallet) => (
+                {mobilePayments.map((wallet) => (
                   <PaymentMethodCard
                     key={wallet.id}
                     data={wallet}
@@ -208,7 +239,7 @@ export function Payments() {
                 Bankings
               </h2>
               <div className="grid grid-cols-4 gap-8">
-                {bankings.map((banking) => (
+                {bankingPayments.map((banking) => (
                   <PaymentMethodCard
                     key={banking.id}
                     data={banking}
@@ -227,7 +258,7 @@ export function Payments() {
 
       {/* Payment System Select Modal */}
       <Modal
-        open={paymentFormStep === FORM_STEP.SYSTEM_CHOOSE}
+        open={paymentFormStep === FORM_STEP.TYPE_CHOOSE}
         onClose={closeForm}
       >
         <ModalContent>
@@ -236,30 +267,30 @@ export function Payments() {
           <div className="mt-4 flex gap-3">
 
             <PaymentSystemRadio
-              name="payment_system"
-              value="mobile_wallet"
+              name="type"
+              value="mobile"
               label="Mobile"
               checked={
-                formData.payment_system === "mobile_wallet"
+                formData.type === "mobile"
               }
               onChange={handleChange}
             />
 
             <PaymentSystemRadio
-              name="payment_system"
+              name="type"
               value="banking"
               label="Banking"
               checked={
-                formData.payment_system === "banking"
+                formData.type === "banking"
               }
               onChange={handleChange}
             />
 
           </div>
 
-          {errors.payment_system && (
+          {errors.type && (
             <p className="text-sm text-red-500 mt-2">
-              {errors.payment_system}
+              {errors.type}
             </p>
           )}
 
@@ -272,7 +303,7 @@ export function Payments() {
             </Button>
 
             <Button
-              disabled={!formData.payment_system}
+              disabled={!formData.type}
               onClick={nextStep}
             >
               Next
@@ -299,7 +330,7 @@ export function Payments() {
               error={errors.payment_name}
               onChange={handleChange}
               label={
-                formData.payment_system === "mobile_wallet"
+                formData.type === "mobile"
                   ? "Wallet Name"
                   : "Banking Name"
               }
@@ -308,15 +339,15 @@ export function Payments() {
 
             {/* Account Holder */}
             <TextInput
-              value={formData.account_holder_name}
-              error={errors.account_holder_name}
+              value={formData.account_name}
+              error={errors.account_name}
               onChange={handleChange}
               label="Account Holder Name"
-              name="account_holder_name"
+              name="account_name"
             />
 
             {/* Account Number */}
-            {formData.payment_system === "banking" && (
+            {formData.type === "banking" && (
               <TextInput
                 value={formData.account_number}
                 error={errors.account_number}
@@ -327,7 +358,7 @@ export function Payments() {
             )}
 
             {/* Phone Number */}
-            {formData.payment_system === "mobile_wallet" && (
+            {formData.type === "mobile" && (
               <TextInput
                 value={formData.phone_number}
                 error={errors.phone_number}
