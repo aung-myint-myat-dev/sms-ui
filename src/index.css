@@ -5,3 +5,12 @@
   --font-roboto: "Roboto", sans-serif;
   --color-theme: #006D2C; 
 }
+
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;              /* Chrome, Safari */
+}

@@ -26,7 +26,7 @@ export function PaymentMethodCard({ data = {}, onEdit }) {
   }
 
   return (
-    <div className="w-full max-w-[225px] h-[78px] border border-[#0000004D] rounded-[8px] p-2.5 flex flex-col justify-between bg-white">
+    <div className="w-full h-[78px] border border-[#0000004D] rounded-[8px] p-2.5 flex flex-col justify-between bg-white">
 
       {/* Payment Name and Switch */}
       <div className="flex items-center justify-between">

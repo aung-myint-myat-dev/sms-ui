@@ -4,6 +4,8 @@ import { Home } from '../pages/home';
 import { Payments } from '../pages/settings/payments';
 import { StudentBanks } from '../pages/student-bank';
 import { BankDetail } from '../pages/student-bank/show';
+import { Policies } from '../pages/settings/policies';
+import { PolicyActionForm } from '../pages/settings/policies/action';
 
 export const router = createBrowserRouter([
   {
@@ -15,8 +17,34 @@ export const router = createBrowserRouter([
         Component: Home
       },
       {
-        path: '/settings/payments',
-        Component: Payments
+        path: '/settings',
+        children: [
+          {
+            path: 'payments',
+            Component: Payments
+          },
+          {
+            path: 'policies',
+            children: [
+              {
+                index: true,
+                Component: Policies
+              },
+              {
+                path: ':type/create',
+                Component: PolicyActionForm,
+              },
+              {
+                path: ':type/update',
+                Component: PolicyActionForm,
+              },
+              {
+                path: ':type/:id/edit',
+                Component: PolicyActionForm,
+              }
+            ]
+          }
+        ],
       },
       {
         path: '/student-banks',

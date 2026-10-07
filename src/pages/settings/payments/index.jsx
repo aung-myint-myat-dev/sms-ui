@@ -196,7 +196,7 @@ export function Payments() {
       <div className="flex gap-4 mt-4 h-full">
 
         {/* Main */}
-        <div className="h-full max-h-150.5 w-full max-w-272.5 flex flex-col gap-6 border border-[#0000004D] rounded-[10px] p-4 overflow-hidden">
+        <div className="h-full max-h-150.5 w-full flex flex-col gap-6 border border-[#0000004D] rounded-[10px] p-4 overflow-hidden">
 
           {/* Heading */}
           <div className="flex items-center justify-between border-b border-theme pb-2">
