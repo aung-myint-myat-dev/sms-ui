@@ -32,8 +32,10 @@ export function PolicyCard({ id, type, title, description, onDelete }) {
         </div>
       </div>
       {showDetail && (
-        <p className={`font-normal text-[14px] mt-1 text-left leading-[23px]`}>{description}</p>
-
+        // <p className={`font-normal text-[14px] mt-1 text-left leading-[23px]`}>{description}</p>
+        <div dangerouslySetInnerHTML={{
+          __html: description
+        }} className="policy-description"></div>
       )}
     </div>
   )

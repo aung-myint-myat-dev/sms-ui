@@ -4,6 +4,10 @@ import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { policies } from "./data";
 import { api } from "../../../lib/api";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import { BubbleMenu, FloatingMenu } from "@tiptap/react/menus";
+import PolicyEditor from "./components/PolicyEditor";
 
 const toolbarButtons = [
   { label: "Paragraph", type: "paragraph", className: "font-medium" },
@@ -26,9 +30,13 @@ export function PolicyActionForm() {
   const location = useLocation();
   const navigate = useNavigate();
   const isUpdateMode = /\/(update|edit)$/.test(location.pathname) || /\/\d+\/edit$/.test(location.pathname);
-  const modeLabel = isUpdateMode ? `Update ${type.charAt(0).toUpperCase() + type.slice(1)} Policies` : 
-   `Create ${type.charAt(0).toUpperCase() + type.slice(1)} Policies` ;
+  const modeLabel = isUpdateMode ? `Update ${type.charAt(0).toUpperCase() + type.slice(1)} Policies` :
+    `Create ${type.charAt(0).toUpperCase() + type.slice(1)} Policies`;
 
+  const editor = useEditor({
+    extensions: [StarterKit],
+    content: '',
+  })
   const emptyFrom = {
     type: '',
     title: '',
@@ -54,6 +62,13 @@ export function PolicyActionForm() {
     setErrors((prev) => ({
       ...prev,
       [name]: "",
+    }))
+  }
+
+  const handleDescriptionChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      description: value,
     }))
   }
 
@@ -123,7 +138,8 @@ export function PolicyActionForm() {
   }, [id, isUpdateMode, type])
 
   return (
-    <div className="p-6 h-full w-full font-roboto flex flex-col">
+    <div className="p-6 h-full overflow-hidden w-full font-roboto flex flex-col">
+      {/* Header */}
       <div className="border-b border-[#D9D9D980] pb-1 flex items-center justify-between">
         <h2 className="font-roboto font-semibold text-[18px] flex items-center gap-3">
           <button className="size-[24px]" onClick={() => navigate(-1)}>
@@ -133,13 +149,18 @@ export function PolicyActionForm() {
         </h2>
       </div>
 
-      <div className="mt-4 w-full h-full border border-[#D9D9D9] rounded-[10px] px-4 py-6 flex flex-col">
+      {/* Form Content */}
+      <div className="flex-1 mt-4 w-full border border-[#D9D9D9] rounded-[10px] px-4 py-6 flex flex-col overflow-hidden">
+
+        {/* Form Heading */}
         <h2 className="text-[16px] font-semibold text-[#228B22] leading-none mb-6">
           {modeLabel}
         </h2>
 
-        <div className="space-y-6 flex-1 flex flex-col h-full">
+        {/* Iputs Group */}
+        <div className="space-y-6 flex-1 flex flex-col overflow-hidden ">
 
+          {/* Title Input */}
           <div className="space-y-2">
             <label className="block text-[15px] font-semibold text-[#1F1F1F]">
               Title <span className="text-[#D93025]">*</span>
@@ -157,38 +178,11 @@ export function PolicyActionForm() {
             )}
           </div>
 
-          <div className="space-y-2 flex-1 flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col gap-2">
             <label className="block text-[15px] font-semibold text-[#1F1F1F]">
               Description <span className="text-[#D93025]">*</span>
             </label>
-
-            <div className="border border-[#D9D9D9] rounded-[4px] h-full overflow-hidden">
-              <div className="flex items-center gap-4 h-[46px] px-3 border-b border-[#D9D9D9] bg-[#E6E6E64F] text-[15px] text-[#000000]">
-                <div className="flex items-center gap-4 text-[16px] font-bold ml-1">
-                  {toolbarButtons.map((button) => (
-                    <button
-                      key={button.type}
-                      type="button"
-                      className={`cursor-pointer ${button.className}`}
-                    >
-                      {button.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <textarea
-                placeholder={defaultDescription}
-                value={formData.description}
-                onChange={handleChange}
-                name="description"
-                className="w-full h-full max-h-[437px] resize-none border-0 bg-transparent px-4 py-3 text-[15px] leading-7 text-[#1F1F1F] outline-none"
-              />
-            </div>
-
-            {errors.description && (
-              <p className="text-xs text-red-500">{errors.description}</p>
-            )}
+            <PolicyEditor value={formData.description} onChange={handleDescriptionChange} />
           </div>
 
           <div className="flex justify-end gap-3">
