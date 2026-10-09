@@ -6,6 +6,7 @@ import { StudentBanks } from '../pages/student-bank';
 import { BankDetail } from '../pages/student-bank/show';
 import { Policies } from '../pages/settings/policies';
 import { PolicyActionForm } from '../pages/settings/policies/action';
+import { SchoolProfile } from '../pages/settings/school-profile';
 
 export const router = createBrowserRouter([
   {
@@ -42,6 +43,15 @@ export const router = createBrowserRouter([
                 path: ':type/:id/edit',
                 Component: PolicyActionForm,
               }
+            ]
+          },
+          {
+            path: 'school-profile',
+            children: [
+              {
+                index: true,
+                Component: SchoolProfile
+              },
             ]
           }
         ],

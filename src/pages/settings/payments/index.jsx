@@ -14,6 +14,7 @@ import {
 import { methods } from "./data/payment-methods";
 import { api } from "../../../lib/api";
 import { handleFormErrors } from "../../../lib/handle-form-errors";
+import { SettingRightSidebar } from "../../components/SettingRightSidebar";
 const FORM_STEP = {
   NONE: "",
   TYPE_CHOOSE: "type_choose",
@@ -253,7 +254,7 @@ export function Payments() {
         </div>
 
         {/* Right Sidebar */}
-        <RightSidebar />
+        <SettingRightSidebar />
       </div>
 
       {/* Payment System Select Modal */}
