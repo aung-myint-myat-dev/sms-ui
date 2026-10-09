@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { EmptyPolicies } from "./components/EmptyPolicies";
 import { PolicyCard } from "./components/PolicyCard";
 import { api } from "../../../lib/api";
+import { SettingRightSidebar } from "../../components/SettingRightSidebar";
 
 export function Policies() {
   const [policies, setPolicies] = useState([])
@@ -115,7 +116,7 @@ export function Policies() {
         </div>
 
         {/* Right Sidebar */}
-        <RightSidebar />
+        <SettingRightSidebar />
       </div>
 
       <Modal onClose={handleClosePolicyRadioModal} open={showPolicyRadio}>
