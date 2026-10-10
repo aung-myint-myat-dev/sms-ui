@@ -3,7 +3,7 @@ import { NavLink, useLocation } from "react-router-dom"
 export function SettingRightSidebar() {
   const links = [
     { id: 1, label: 'School Profile', url: '/settings/school-profile' },
-    { id: 2, label: 'Academic Year', url: '#' },
+    { id: 2, label: 'Academic Year', url: '/settings/academic-years' },
     { id: 3, label: 'Role & Permissions', url: '#' },
     { id: 4, label: 'Payments', url: '/settings/payments' },
     { id: 5, label: 'Policies', url: '/settings/policies' },

@@ -7,6 +7,7 @@ import { BankDetail } from '../pages/student-bank/show';
 import { Policies } from '../pages/settings/policies';
 import { PolicyActionForm } from '../pages/settings/policies/action';
 import { SchoolProfile } from '../pages/settings/school-profile';
+import { AcademicYears } from '../pages/settings/academic-years';
 
 export const router = createBrowserRouter([
   {
@@ -53,6 +54,10 @@ export const router = createBrowserRouter([
                 Component: SchoolProfile
               },
             ]
+          },
+          {
+            path: 'academic-years',
+            Component: AcademicYears,
           }
         ],
       },
