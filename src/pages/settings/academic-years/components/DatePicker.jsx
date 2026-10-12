@@ -25,48 +25,38 @@ const formatDate = (date) => {
 
 const parseDate = (value) => {
   if (!value) return null;
-
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-
-  if (!match) return null;
-
-  const [, year, month, day] = match;
-  const date = new Date(Number(year), Number(month) - 1, Number(day));
-
-  if (
-    date.getFullYear() !== Number(year) ||
-    date.getMonth() !== Number(month) - 1 ||
-    date.getDate() !== Number(day)
-  ) {
-    return null;
-  }
-
-  return date;
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
 };
 
 export function DatePicker({
   open,
+  onClose,
   name,
   value = "",
   onConfirm,
-  onClose,
   minDate,
   maxDate,
   fromYear = 2004,
   toYear
 }) {
+
   const today = new Date();
   const todayString = formatDate(today);
+
   const getInitialDate = () => {
+    const parsedDate = parseDate(value)
+    if(parsedDate) {
+      return parsedDate
+    }
     if (fromYear === today.getFullYear()) {
       return today;
     }
-
     return new Date(fromYear, 0, 1)
   }
 
-  const [selectedDate, setSelectedDate] = useState(getInitialDate);
   const datePickerRef = useRef(null)
+  const [selectedDate, setSelectedDate] = useState(getInitialDate);
   const [viewDate, setViewDate] = useState(getInitialDate);
   const [view, setView] = useState("days");
 
@@ -82,7 +72,6 @@ export function DatePicker({
 
   useEffect(() => {
     const date = getInitialDate();
-
     setSelectedDate(date);
     setViewDate(date);
     setView("days");
@@ -90,7 +79,6 @@ export function DatePicker({
 
   useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside)
-
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose])
 
@@ -101,7 +89,6 @@ export function DatePicker({
 
   const isDisabled = (date) => {
     const dateString = formatDate(date);
-
     return (
       (min && dateString < formatDate(min)) ||
       (max && dateString > formatDate(max))
@@ -123,12 +110,6 @@ export function DatePicker({
     viewDate.getMonth(),
     1
   ).getDay();
-
-  const daysInMonth = new Date(
-    viewDate.getFullYear(),
-    viewDate.getMonth() + 1,
-    0
-  ).getDate();
 
   const days = Array.from(
     { length: 42 },
@@ -174,6 +155,24 @@ export function DatePicker({
     (_, index) => yearStart + index
   ).filter((year) => year >= fromYear && year <= toYear);
 
+  const isChangeMonthButtonDisabled = (direction) => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+
+    if (direction === "prev") {
+      return year < fromYear || (year === fromYear && month === 0);
+    }
+
+    if (direction === "next") {
+      return (
+        toYear !== undefined &&
+        (year > toYear || (year === toYear && month === 11))
+      );
+    }
+
+    return false;
+  };
+
   return (
     <div ref={datePickerRef} className="w-full rounded-[10px] border border-gray-200 bg-white p-4 shadow-lg">
       {/* Header */}
@@ -181,8 +180,9 @@ export function DatePicker({
         <button
           type="button"
           onClick={() => changeMonth(-1)}
-          className="rounded-md p-1 hover:bg-gray-100"
+          className={`rounded-md p-1 hover:bg-gray-100 ${isChangeMonthButtonDisabled("prev") && 'text-zinc-300 cursor-not-allowed'}`}
           aria-label="Previous month"
+          disabled={isChangeMonthButtonDisabled("prev")}
         >
           <ChevronLeft size={20} />
         </button>
@@ -207,8 +207,9 @@ export function DatePicker({
         <button
           type="button"
           onClick={() => changeMonth(1)}
-          className="rounded-md p-1 hover:bg-gray-100"
+          className={`rounded-md p-1 hover:bg-gray-100 ${isChangeMonthButtonDisabled("next") && 'text-zinc-300 cursor-not-allowed '}`}
           aria-label="Next month"
+          disabled={isChangeMonthButtonDisabled("next")}
         >
           <ChevronRight size={20} />
         </button>

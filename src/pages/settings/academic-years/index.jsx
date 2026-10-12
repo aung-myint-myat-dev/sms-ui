@@ -1,9 +1,9 @@
-import { Edit2, PencilIcon, School, SquareText, SquareX } from "lucide-react";
+import { CalendarDaysIcon, Edit2, PencilIcon, School, SquareText, SquareX } from "lucide-react";
 import { SettingRightSidebar } from "../../components/SettingRightSidebar";
 import { AcademicYearDetailDisplayForm } from "./components/AcademicYearDetailDisplayFormCard";
 import { DisplayCard } from "./components/DisplayCard";
 import { TableData, TableHead, TableRow } from "./components/Table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fakeAcademicYears } from "./academic-years";
 import { AcademicYearStatusBadge } from "./components/AcademicYearStatusBadge";
 import { Button } from "../payments/components/ui/Button";
@@ -16,6 +16,7 @@ export function AcademicYears() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [selectedAcademicYear, setSelectedAcademicYear] = useState(null)
   const [formData, setFormData] = useState({})
+  const mainRef = useRef(null)
 
   const currentAcademicYear = useMemo(() => {
     const activeYear = academicYears?.find((year) => year.status === 'active')
@@ -25,6 +26,10 @@ export function AcademicYears() {
   const handleEditAcademicYear = (year) => {
     setIsEdit(true)
     setSelectedAcademicYear(year)
+    mainRef?.current.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    })
   }
 
   const handleCancelEditAcademicYear = () => {
@@ -45,6 +50,13 @@ export function AcademicYears() {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+    }))
+  }
+
+  const handleDateChange = ({ name, vlaue }) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: vlaue
     }))
   }
 
@@ -74,7 +86,7 @@ export function AcademicYears() {
       {/* Main and Right Sidebar Container */}
       <div className="flex gap-4 mt-4 h-full w-full overflow-hidden overflow-y-auto">
         {/* Main */}
-        <div className="flex-1 rounded-[10px] border border-[#C4CDC7] h-full space-y-4 bg-zinc-100 py-3 px-4 overflow-hidden overflow-y-auto scrollbar-hide">
+        <div ref={mainRef} className="flex-1 rounded-[10px] border border-[#C4CDC7] h-full space-y-4 bg-zinc-100 py-3 px-4 overflow-hidden overflow-y-auto scrollbar-hide">
 
           {/* Add Button */}
           <div className="flex justify-end">
@@ -84,8 +96,7 @@ export function AcademicYears() {
           </div>
 
           {/* Current Academic Year */}
-          <div className={`border py-4 px-6 flex items-center justify-between rounded-[10px] ${isEdit && 'outline outline-offset-2 outline-[#228B22]'} border-[#C4CDC7]`}>
-            {/* Left */}
+          {/* <div className={`border py-4 px-6 flex items-center justify-between rounded-[10px] ${isEdit && 'outline outline-offset-2 outline-[#228B22]'} border-[#C4CDC7]`}>
             <CurrentAcademicYearDisplayForm
               name="academic_year"
               label={isEdit ? 'Edit academic year' : 'Current Academic Year'}
@@ -93,9 +104,28 @@ export function AcademicYears() {
               onChange={handleChange}
             />
 
-            {/* Logo */}
+   
             <div className="size-[50px] rounded-[8px] overflow-hidden">
               <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS7BTzVBuyix9HxdRfxQG0QuVYQsSD318utuBHVtJvM7A&s=10" alt="school-logo" className="w-full h-full object-contain" />
+            </div>
+          </div> */}
+          <div className="border py-4 px-6 flex items-center justify-between rounded-[10px] bg-[#E9F6EC] border-[#C4CDC7]">
+            {/* Left */}
+            <CurrentAcademicYearDisplayForm
+              isDisable={!isEdit}
+              name="academic_year"
+              label={isEdit ? "Edit academic year" : "Current Academic Year"}
+              value={formData.academic_year}
+              onChange={handleChange}
+            />
+
+            {/* Logo */}
+            <div className="size-[50px] rounded-[8px] overflow-hidden shrink-0">
+              <img
+                src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS7BTzVBuyix9HxdRfxQG0QuVYQsSD318utuBHVtJvM7A&s=10"
+                alt="school-logo"
+                className="w-full h-full object-contain"
+              />
             </div>
           </div>
 
@@ -103,43 +133,47 @@ export function AcademicYears() {
           <DisplayCard title={isEdit ? 'Edit your acdemic year informations here' : 'Academic Year Details'}>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               <AcademicYearDetailDisplayForm
+                academicYear={formData?.academic_year}
+                isDisable={!isEdit}
                 name="school_opening_date"
-                value={formData?.school_opening_date}
-                onChange={handleChange}
-                icon={School}
-                isDisable={!isEdit}
                 label="School Opening Date"
-              />
-
-              <AcademicYearDetailDisplayForm
-                name="school_closing _date"
-                value={formData?.school_closing_date}
+                value={formData.school_opening_date}
                 onChange={handleChange}
-                icon={School}
-                isDisable={!isEdit}
-                label="School Closign Date"
+                icon={CalendarDaysIcon}
               />
 
               <AcademicYearDetailDisplayForm
+                academicYear={formData?.academic_year}
+                isDisable={!isEdit}
+                name="school_closing_date"
+                label="School Closing Date"
+                value={formData.school_closing_date}
+                onChange={handleChange}
+                icon={CalendarDaysIcon}
+              />
+
+              <AcademicYearDetailDisplayForm
+                academicYear={formData?.academic_year}
+                isDisable={!isEdit}
                 name="registration_open_date"
+                label="Registration Open Date"
                 value={formData.registration_open_date}
                 onChange={handleChange}
-                icon={SquareText}
-                isDisable={!isEdit}
-                label="Registration Open Date "
+                icon={CalendarDaysIcon}
               />
 
               <AcademicYearDetailDisplayForm
+                academicYear={formData?.academic_year}
+                isDisable={!isEdit}
                 name="registration_close_date"
+                label="Registration Close Date"
                 value={formData.registration_close_date}
                 onChange={handleChange}
-                icon={SquareX}
-                isDisable={!isEdit}
-                label="Registration Close Date"
+                icon={CalendarDaysIcon}
               />
             </div>
 
-            {isEdit && selectedAcademicYear && (
+            {isEdit && (
               <div className="mt-4 flex items-center justify-end">
                 <div className="flex items-center gap-3">
                   <Button onClick={handleCancelEditAcademicYear} variant="danger">Cancel</Button>
@@ -198,7 +232,7 @@ export function AcademicYears() {
         <SettingRightSidebar />
       </div>
 
-      <CreateAcademicYearFormModal open={showCreateForm} onClose={closeCreateForm}/>
+      <CreateAcademicYearFormModal open={showCreateForm} onClose={closeCreateForm} />
     </div>
   )
 }

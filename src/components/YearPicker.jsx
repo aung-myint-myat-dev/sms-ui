@@ -12,13 +12,8 @@ export function YearPicker({
   onClose,
 }) {
   const currentYear = new Date().getFullYear();
-
-  const getInitialYear = () =>
-    Math.min(toYear, Math.max(fromYear, currentYear));
-
-  const getPageStart = (year) =>
-    fromYear + Math.floor((year - fromYear) / 9) * 9;
-
+  const getInitialYear = () => Math.min(toYear, Math.max(fromYear, currentYear))
+  const getPageStart = (year) => fromYear + Math.floor((year - fromYear) / 9) * 9;
   const [selectedYear, setSelectedYear] = useState(getInitialYear);
   const datePickerRef = useRef(null)
   const [pageStart, setPageStart] = useState(() =>
@@ -40,6 +35,8 @@ export function YearPicker({
     setSelectedYear(initialYear);
     setPageStart(getPageStart(initialYear));
   }, [fromYear, toYear, value]);
+
+  console.log(value)
 
   const handleClickOutside = (event) => {
     if (
@@ -84,20 +81,8 @@ export function YearPicker({
     });
   };
 
-
-  // useEffect(() => {
-
-  //   document.addEventListener("mousedown", handleClickOutside);
-
-  //   return () => {
-  //     document.removeEventListener("mousedown", handleClickOutside);
-  //   };
-  // }, [onClose]);
-
-
-
   return (
-    <div ref={datePickerRef} className="min-h-[242px] flex flex-col gap-3 w-full bg-white mr-2 p-4 rounded-[10px]">
+    <div ref={datePickerRef} className="min-h-[242px] min-w-[250px] flex flex-col gap-3 w-full bg-white mr-2 p-4 rounded-[10px]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="font-semibold text-[14px]">

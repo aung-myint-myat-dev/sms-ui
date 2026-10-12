@@ -22,6 +22,8 @@ export function CreateAcademicYearFormModal({
   const [formData, setFormData] = useState(emptyForm);
   const [yearPicker, setYearPicker] = useState(null);
   const [datePicker, setDatePicker] = useState(null);
+  const currentYear = new Date().getFullYear();
+  const startYear = formData.academic_year ? Number(formData.academic_year.split('-')[0].trim()) : Number(currentYear)
 
   const datePlaceholder = new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -38,11 +40,12 @@ export function CreateAcademicYearFormModal({
   };
 
   const handleYearPick = (name, value) => {
+    const oldYear = startYear ?? ''
     if (yearPicker) {
       setYearPicker(null)
     }
     setDatePicker(null)
-    setYearPicker({ name, value })
+    setYearPicker({ name, value: startYear ?? '' })
   }
 
   const handleDatePick = (name, value) => {
@@ -72,9 +75,6 @@ export function CreateAcademicYearFormModal({
     onClose()
   }
 
-  const currentYear = new Date().getFullYear();
-  const startYear = formData.academic_year ? Number(formData.academic_year.split('-')[0].trim()) : Number(currentYear)
-
   if (!open) return null;
 
   return (
@@ -100,7 +100,7 @@ export function CreateAcademicYearFormModal({
             <YearPicker
               open={yearPicker}
               name={yearPicker?.name}
-              value={yearPicker?.value}
+              value={startYear ?? ''}
               onConfirm={handleYearConfirm}
               onClose={() => setYearPicker(null)}
             />

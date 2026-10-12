@@ -8,7 +8,7 @@ export function TableRow({ children }) {
 
 export function TableHead({children, className}) {
   return (
-    <th className={`py-2.5 px-3 font-semibold text-[14px] text-[#228B22] ${className}`}>
+    <th className={`py-2.5 px-3 font-semibold text-[14px] bg-[#E9F6EC] text-[#228B22] ${className}`}>
       {children}
     </th>
   )
