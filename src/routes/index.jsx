@@ -9,6 +9,7 @@ import { PolicyActionForm } from '../pages/settings/policies/action';
 import { SchoolProfile } from '../pages/settings/school-profile';
 import { AcademicYears } from '../pages/settings/academic-years';
 import { Exams } from '../pages/settings/exams';
+import { ExamsProduction } from '../pages/settings/exams/exam.production';
 
 export const router = createBrowserRouter([
   {
@@ -57,13 +58,10 @@ export const router = createBrowserRouter([
             ]
           },
           {
-<<<<<<< HEAD
             path: 'academic-years',
             Component: AcademicYears,
-=======
             path: 'exams',
             Component: Exams
->>>>>>> 1e289f5 (half way)
           }
         ],
       },

@@ -1,10 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { TABS } from "./utlis";
-import { classes, exam_types, grades, grading_systems, studentMarks } from "./data";
-import { Check, File, FileText, GraduationCap, Minus, NotebookPen, Pencil, PencilLineIcon, Plus, Save, Search, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useDeferredValue } from "react";
+import { calculateDuration, getExamName, getGradingSystemName, getSubjectName, getSubjectsByGrade, TABS } from "./utlis";
+import { classes, exam_setups, exam_types, grades, grading_systems, studentMarks, subjects } from "./data";
 import { Switch } from "./components/ui/Switch";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRightSquare,
+  File,
+  FileText,
+  GraduationCap,
+  Minus,
+  NotebookPen,
+  Pencil,
+  PencilLineIcon,
+  Plus,
+  Save,
+  Search,
+  Settings,
+  Trash2,
+  X
+} from "lucide-react";
 
 export function Exams() {
+  // Tab
   const [selectedTab, setSelectedTab] = useState('student-marks')
 
   // Global Handelers
@@ -14,7 +32,7 @@ export function Exams() {
       ...prev,
       [name]: value
     }))
-    setErrors((prev) => ({
+    setErrors?.((prev) => ({
       ...prev,
       [name]: '',
     }))
@@ -52,11 +70,12 @@ export function Exams() {
   const [marks, setMarks] = useState(studentMarks)
   const [studentMarksFormErrors, setStudentMarkFormErrors] = useState({})
   const [searchQuery, setSearchQuery] = useState('')
+  const deferredSearch = useDeferredValue(searchQuery)
 
   const handleEnterMarks = () => {
     const forms = {};
     const errors = {};
-    filteredStudentMarks.forEach((student) => {
+    selectedStudentMarks.forEach((student) => {
       forms[student.id] = {
         ...emptyStudentMarkForm,
         myanmar: student.myanmar ?? "",
@@ -84,7 +103,7 @@ export function Exams() {
   };
   const handleStudentMarkChange = (studentId, event) => {
     const { name, value } = event.target
-    if (value !== "" && (!/^\d+$/.test(value) || Number(value) > 101)) {
+    if (value !== "" && (!/^\d+$/.test(value) || Number(value) > 100)) {
       return;
     }
     setStudentMarkForm((prev) => ({
@@ -109,7 +128,7 @@ export function Exams() {
     // Demo action
     setMarks((prev) => prev.map((student) => {
       const marks = studentMarksForm[student.id]
-      if (!marks) return
+      if (!marks) return student;
 
       return {
         ...student,
@@ -146,7 +165,8 @@ export function Exams() {
     // Store exam type api call here.
 
     // Demo Action
-    const id = examTypes.length + 1;
+    if (!examTypeFormDate.name.trim()) { setExamTypeFormErrors({ name: 'Exam name is required' }); return; }
+    const id = Math.max(0, ...examTypes.map(item => Number(item.id))) + 1;
     const payload = {
       ...examTypeFormDate,
       id,
@@ -159,12 +179,9 @@ export function Exams() {
   const handleUpdateExamType = () => {
     // Update exam type api call here.
     console.log(examTypeFormDate);
-    const examType = examTypes.find((exam) => exam.id === editingExamType.id)
-    const oldId = examType.id
-    Object.assign(examType, {
-      ...examTypeFormDate,
-      id: oldId
-    })
+    if (!examTypeFormDate.name.trim()) { setExamTypeFormErrors({ name: 'Exam name is required' }); return; }
+    setExamTypes(prev => prev.map(exam => exam.id === editingExamType.id
+      ? { ...exam, ...examTypeFormDate, id: exam.id } : exam));
     // After update Success
     setEditingExamType(null)
     setExamTypeFormData(emptyExamTypeForm)
@@ -189,6 +206,7 @@ export function Exams() {
   };
   const handleEditExamType = (exam) => {
     setEditingExamType(exam)
+    setExamTypeFormData({ ...exam })
     setTimeout(() => {
       examTypeNameInputRef?.current.focus();
     }, 50)
@@ -232,11 +250,23 @@ export function Exams() {
   const [editingGradingSystem, setEditingGradingSystem] = useState(null)
   const lastRange = gradingSystemForm.ranges.at(-1)
 
-  const isRangeIncomplete =
-    !lastRange?.grading.trim() ||
-    lastRange?.from === '' ||
-    lastRange?.to === ''
+  const isRangeIncomplete = !lastRange?.grading.trim() || lastRange?.from === '' || lastRange?.to === ''
+  const makeEmptyGradingForm = () => ({ name: '', max_mark: '', pass_mark: '', ranges: [{ id: crypto.randomUUID(), grading: '', from: '', to: '' }] });
+  const validateGrading = () => {
+    const max = Number(gradingSystemForm.max_mark);
+    const pass = Number(gradingSystemForm.pass_mark);
+    const ranges = gradingSystemForm.ranges;
+    const valid = gradingSystemForm.name.trim() && gradingSystemForm.max_mark !== '' &&
+      Number.isFinite(max) && max > 0 && gradingSystemForm.pass_mark !== '' && pass >= 0 && pass <= max &&
+      ranges.length > 0 && ranges.every(r => r.grading.trim() && r.from !== '' && r.to !== '' &&
+        Number(r.from) >= 0 && Number(r.to) <= max && Number(r.from) <= Number(r.to)) &&
+      ranges.every((r, i) => ranges.every((other, j) => i === j ||
+        Number(r.to) < Number(other.from) || Number(r.from) > Number(other.to)));
+    if (!valid) window.alert('Check grading name, max/pass marks, and non-overlapping valid ranges.');
+    return Boolean(valid);
+  };
   const handleCreateGradingSystem = () => {
+    setGradingSystemForm(makeEmptyGradingForm())
     setShowGradingSystemActionForm(true)
     setEditingGradingSystem(null)
   }
@@ -244,27 +274,33 @@ export function Exams() {
     // Store grading system API call here
 
     //demo action
+    if (!validateGrading()) return;
     const payload = {
       ...gradingSystemForm,
-      id: gradingSystems.length + 1
+      max_mark: Number(gradingSystemForm.max_mark),
+      pass_mark: Number(gradingSystemForm.pass_mark),
+      ranges: gradingSystemForm.ranges.map(r => ({ ...r, from: Number(r.from), to: Number(r.to) })),
+      id: Math.max(0, ...gradingSystems.map(g => Number(g.id))) + 1
     }
     setGradingSystems(prev => [...prev, payload])
     handleCloseGradingSystemActionForm();
   }
   const handleEditGradingSystem = (grading) => {
     setEditingGradingSystem(grading)
+    setGradingSystemForm({ ...grading, ranges: grading.ranges.map(r => ({ ...r })) })
     setShowGradingSystemActionForm(true)
   }
   const handleUpdateGradingSystem = (id) => {
     // Update grading system API call here
 
     // Demo action
-    const system = gradingSystems.find((item) => item.id === id)
-    const oldId = system.id
-    Object.assign(system, {
-      ...gradingSystemForm,
-      id: oldId,
-    })
+    if (!validateGrading()) return;
+    setGradingSystems(prev => prev.map(system => system.id === id ? {
+      ...gradingSystemForm, id,
+      max_mark: Number(gradingSystemForm.max_mark),
+      pass_mark: Number(gradingSystemForm.pass_mark),
+      ranges: gradingSystemForm.ranges.map(r => ({ ...r, from: Number(r.from), to: Number(r.to) }))
+    } : system));
     handleCloseGradingSystemActionForm();
   }
   const handleDleteGradingSystem = (id) => {
@@ -274,7 +310,7 @@ export function Exams() {
   }
   const handleCloseGradingSystemActionForm = () => {
     setShowGradingSystemActionForm(false)
-    setGradingSystemForm(emptyGradingSystemForm)
+    setGradingSystemForm(makeEmptyGradingForm())
     setGradingSystemFormErrors(emptyGradingSystemFormError)
     setEditingGradingSystem(null)
   }
@@ -284,10 +320,10 @@ export function Exams() {
       ranges: [
         ...prev.ranges,
         {
-          id: prev.ranges.length + 1,
+          id: crypto.randomUUID(),
           grading: "",
-          form: 0,
-          to: 0,
+          from: "",
+          to: "",
         }
       ]
     }))
@@ -314,13 +350,191 @@ export function Exams() {
   };
 
 
-  const filteredClasses = useMemo(() => {
-    if (selectedGradeId) {
-      return classes.filter((c) => c.grade_id === Number(selectedGradeId))
+  // Exam Set UP States, Actions and handelers
+  const emptySetUpForm = {
+    exam_type_id: '',
+    grade_id: '',
+    grading_system_id: '',
+    formats: [
+      {
+        id: '',
+        subject_id: '',
+        subject_name: '',
+        date: '',
+        start_time: '',
+        end_time: '',
+        duration: 0,
+        max_mark: 0,
+        pass_mark: 0,
+        d_mark: '',
+        is_active: true,
+      }
+    ]
+  }
+  const [selectedSetUpGrade, setSelectedSetUpGrade] = useState(null)
+  const [examSetUps, setExamSetUps] = useState(null);
+  const [showSetUpActionForm, setShowSetUpActionForm] = useState(false)
+  const [setUpForm, setSetUpForm] = useState(emptySetUpForm)
+  const [editingSetUp, setEditingSetUp] = useState(null)
+
+  const handleFormatChange = (id, e) => {
+    const { name, value } = e.target
+    setSetUpForm((prev) => ({
+      ...prev,
+      formats: prev.formats.map((format) => {
+        if (format.id !== id) return format
+
+        const updatedFormat = {
+          ...format,
+          [name]: value
+        }
+
+        if (name === "start_time" || name === "end_time") {
+          updatedFormat.duration = calculateDuration(updatedFormat.start_time, updatedFormat.end_time);
+        }
+
+        return updatedFormat;
+      })
+    }))
+  }
+  const handleToggleSetUpActive = (id) => {
+    setSetUpForm((prev) => ({
+      ...prev,
+      formats: prev.formats.map((format) =>
+        format.id === id ? {
+          ...format,
+          is_active: !format.is_active
+        } : format
+      )
+    }))
+  }
+  const handleSelectSetUpGrade = (id) => {
+    const grade = grades.find((item) => item.id === id);
+    if (!grade) return;
+
+    setSelectedSetUpGrade(grade);
+  };
+  const handleChangeGradingSystemId = (systemId) => {
+    if (!systemId || systemId === 'none') {
+      setSetUpForm((prevForm) => ({
+        ...prevForm,
+        grading_system_id: '',
+        formats: prevForm.formats.map((item) => ({
+          ...item,
+          max_mark: 0,
+          pass_mark: 0,
+        }))
+      }));
+      return;
     }
+
+    const selectedSystem = gradingSystems.find((sys) => sys.id === Number(systemId));
+    if (!selectedSystem) return;
+
+    setSetUpForm((prevForm) => ({
+      ...prevForm,
+      grading_system_id: selectedSystem.id,
+      formats: prevForm.formats.map((formatItem) => ({
+        ...formatItem,
+        max_mark: selectedSystem.max_mark,
+        pass_mark: selectedSystem.pass_mark,
+      })),
+    }));
+  }
+  const handleCancelSelectSetUpGarde = () => {
+    setSelectedSetUpGrade(null)
+    setSetUpForm(emptySetUpForm)
+    setShowSetUpActionForm(false)
+  }
+  const handleCreateSetUp = () => {
+    setEditingSetUp(null)
+    setShowSetUpActionForm(true)
+    const matchedSubjects = getSubjectsByGrade(selectedSetUpGrade.id, subjects);
+    const newFormats = matchedSubjects.map((subject) => ({
+      id: crypto.randomUUID(),
+      subject_id: subject.id,
+      subject_name: subject.name,
+      date: '',
+      start_time: '',
+      end_time: '',
+      duration: 0,
+      max_mark: 0,
+      pass_mark: 0,
+      d_mark: '',
+      is_active: true,
+    }));
+
+    setSetUpForm((prevForm) => ({
+      ...emptySetUpForm,
+      grading_system_id: "",
+      grade_id: selectedSetUpGrade.id,
+      formats: newFormats.length > 0 ? newFormats : [
+        {
+          id: '',
+          subject_id: '',
+          subject_name: '',
+          date: '',
+          start_time: '',
+          end_time: '',
+          duration: 0,
+          max_mark: 0,
+          pass_mark: 0,
+          d_mark: '',
+          is_active: true,
+        }
+      ]
+    }));
+  }
+  const handleSaveSetUp = () => {
+    if (!validateSetUp()) return;
+    const payload = {
+      ...setUpForm, id: crypto.randomUUID(),
+      exam_type_id: Number(setUpForm.exam_type_id), grade_id: Number(setUpForm.grade_id),
+      grading_system_id: setUpForm.grading_system_id === '' ? null : Number(setUpForm.grading_system_id)
+    };
+    setAllExamSetUps((prev) => [...prev, payload])
+    handleCloseSetUpActionForm()
+  }
+  const handleEditSetUp = (setUp) => {
+    setEditingSetUp(setUp)
+    setSetUpForm({ ...setUp, formats: setUp.formats.map(format => ({ ...format })) })
+    setShowSetUpActionForm(true)
+  }
+  const handleUpdateSetUp = () => {
+    if (!validateSetUp()) return;
+    setAllExamSetUps((prev) => prev.map(item => item.id === editingSetUp.id
+      ? {
+        ...setUpForm, id: editingSetUp.id,
+        exam_type_id: Number(setUpForm.exam_type_id), grade_id: Number(setUpForm.grade_id),
+        grading_system_id: setUpForm.grading_system_id === '' ? null : Number(setUpForm.grading_system_id)
+      }
+      : item));
+    handleCloseSetUpActionForm()
+  }
+  const validateSetUp = () => {
+    const valid = setUpForm.exam_type_id && setUpForm.grade_id && setUpForm.formats.length > 0 &&
+      setUpForm.formats.every(f => Number(f.max_mark) >= 0 && Number(f.pass_mark) >= 0 &&
+        Number(f.pass_mark) <= Number(f.max_mark) && (!f.start_time || !f.end_time || f.end_time > f.start_time));
+    if (!valid) window.alert('Select an exam type and check subject marks and times.');
+    return Boolean(valid);
+  };
+  const handleDeleteSetUp = (id) => {
+    if (!window.confirm('Delete this exam setup?')) return;
+    setAllExamSetUps(prev => prev.filter(item => item.id !== id));
+  };
+  const handleCloseSetUpActionForm = () => {
+    setShowSetUpActionForm(false)
+    setEditingSetUp(null)
+    setSetUpForm(emptySetUpForm)
+  }
+
+
+
+  const filteredClasses = useMemo(() => {
+    return selectedGradeId ? classes.filter(c => c.grade_id === Number(selectedGradeId)) : [];
   }, [selectedGradeId])
 
-  const filteredStudentMarks = useMemo(() => {
+  const selectedStudentMarks = useMemo(() => {
     if (selectedClassId && selectedExamTypeId) {
       return marks.filter((mark) =>
         mark.class_id === Number(selectedClassId) &&
@@ -329,6 +543,23 @@ export function Exams() {
     }
     return [];
   }, [marks, selectedClassId, selectedExamTypeId]);
+
+  const filteredStudentMarks = useMemo(() => {
+    const q = deferredSearch.trim().toLocaleLowerCase();
+    return q ? selectedStudentMarks.filter(mark =>
+      String(mark.student_name ?? '').toLocaleLowerCase().includes(q)) : selectedStudentMarks;
+  }, [selectedStudentMarks, deferredSearch]);
+
+  const studentRanks = useMemo(() => {
+    const ranked = [...selectedStudentMarks].sort((a, b) => Number(b.total ?? 0) - Number(a.total ?? 0));
+    const ranks = new Map();
+    ranked.forEach((student, index) => {
+      const previous = ranked[index - 1];
+      ranks.set(student.id, previous && Number(previous.total ?? 0) === Number(student.total ?? 0)
+        ? ranks.get(previous.id) : index + 1);
+    });
+    return ranks;
+  }, [selectedStudentMarks]);
 
 
   // Exam Type Edit
@@ -345,6 +576,20 @@ export function Exams() {
     }
   }, [editingGradingSystem])
 
+  useEffect(() => {
+    if (editingSetUp) {
+      setSetUpForm(editingSetUp)
+    }
+  }, [editingSetUp])
+
+  const [allExamSetUps, setAllExamSetUps] = useState(() => exam_setups.map((item, index) => ({
+    ...item, id: item.id ?? `seed-${index}`, formats: item.formats.map(f => ({ ...f }))
+  })));
+  useEffect(() => {
+    if (selectedSetUpGrade) {
+      setExamSetUps(allExamSetUps.filter(item => Number(item.grade_id) === Number(selectedSetUpGrade.id)));
+    }
+  }, [selectedSetUpGrade, allExamSetUps]);
 
   return (
     <div className="w-full h-full overflow-hidden py-3 px-6 font-roboto flex flex-col gap-2">
@@ -435,7 +680,7 @@ export function Exams() {
                   id="exam_type"
                   className="text-[14px] font-normal text-[#00000099] h-[39px] border border-[#0000001F] rounded-[8px] focus:outline-none px-3">
                   <option value="" disabled>Select exam type</option>
-                  {exam_types.map((exam_type) => (
+                  {examTypes.filter(exam => exam.is_active).map((exam_type) => (
                     <option className="text-black" value={exam_type.id} key={exam_type.id}>{exam_type.name}</option>
                   ))}
                 </select>
@@ -443,7 +688,7 @@ export function Exams() {
             </div>
 
             {/* Student Marks Table*/}
-            {filteredStudentMarks?.length > 0 ? (
+            {selectedStudentMarks.length > 0 ? (
               <div className="px-1">
                 {/* Search and Enter Marks */}
                 <div className="mt-4 flex items-center justify-between w-full">
@@ -452,7 +697,7 @@ export function Exams() {
                     <Search className="size-[18px] text-[#00000099] shrink-0" />
                     <input
                       value={searchQuery}
-                      // onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       type="text"
                       placeholder="Search Student"
                       className="w-full h-full text-[14px] bg-transparent focus:outline-none placeholder:text-[#00000066] leading-none"
@@ -536,7 +781,7 @@ export function Exams() {
 
                     <tbody>
                       {filteredStudentMarks.map((mark) => {
-                        const examType = exam_types.find((type) => type.id === mark.exam_id)
+                        const examType = examTypes.find((type) => Number(type.id) === Number(mark.exam_id))
                         const hasReport = examType?.has_report_card
 
                         return (
@@ -633,9 +878,7 @@ export function Exams() {
                               <>
                                 {/* Rank */}
                                 <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                                  {isEnteringMarks ? (
-                                    <input className="border border-[#0000001F] rounded-[8px] h-[32px] w-[98px] px-2" type="text" />
-                                  ) : '-'}
+                                  {studentRanks.get(mark.id) ?? '-'}
                                 </td>
 
                                 {/* Report Card */}
@@ -654,6 +897,7 @@ export function Exams() {
                       })}
                     </tbody>
                   </table>
+                  {filteredStudentMarks.length === 0 && <p className="py-6 text-center text-sm text-gray-500">No students match your search.</p>}
                 </div>
               </div>
             ) : (
@@ -1095,8 +1339,339 @@ export function Exams() {
 
         {/* Exam Setup */}
         {selectedTab === TABS[3].value && (
-          <div>
-            Here is Exam Set up
+          <div className="h-full overflow-hidden pt-2">
+
+            {selectedSetUpGrade ? (
+              // Tables Information
+              <div className="h-full flex flex-col gap-3">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {/* Back to grades button */}
+                    <button
+                      onClick={handleCancelSelectSetUpGarde}
+                      className="cursor-pointer">
+                      <ChevronLeft size={18} />
+                    </button>
+                    <h2 className="font-semibold text-[18px]">{selectedSetUpGrade.label}</h2>
+                  </div>
+
+                  {/* Create Set Up Button */}
+                  {!showSetUpActionForm && (
+                    <button
+                      onClick={handleCreateSetUp}
+                      className="cursor-pointer h-[39px] flex items-center px-4 bg-[#228B22] text-white rounded-full font-semibold text-[14px]">
+                      + Add New Set Up
+                    </button>
+                  )}
+                </div>
+
+                {showSetUpActionForm ? (
+                  // Show Form
+                  <div className="border flex-1 overflow-hidden overflow-y-auto border border-[#0000001F] rounded-[8px] p-2">
+
+                    {/* Form Header */}
+                    <div className="p-[20px] bg-[#228B221A] rounded-[8px] flex items-end gap-5">
+
+                      <div className="flex flex-col gap-1 flex-1">
+                        <label htmlFor="exam_type_id" className="font-normal text-[14px]">Exam Type</label>
+                        <select
+                          id="exam_type_id"
+                          name="exam_type_id"
+                          value={setUpForm.exam_type_id ?? ""}
+                          onChange={(e) => handleChange(e, setSetUpForm)}
+                          className="text-[14px] font-normal text-[#00000099] h-[39px] bg-white border border-[#0000001F] rounded-[8px] focus:outline-none px-3">
+                          <option value="" disabled>Chose exam type</option>
+                          {examTypes?.map((item) => (
+                            <option className="text-black" value={item.id} key={item.id}>{item.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1 flex-1">
+                        <label htmlFor="grading_system_id" className="font-normal text-[14px]">Grading System</label>
+                        <select
+                          id="grading_system_id"
+                          name="grading_system_id"
+                          value={setUpForm.grading_system_id ?? ""}
+                          onChange={(e) => handleChangeGradingSystemId(e.target.value)}
+                          className="text-[14px] font-normal text-[#00000099] h-[39px] bg-white border border-[#0000001F] rounded-[8px] focus:outline-none px-3">
+                          <option value="" disabled>Choose grading system</option>
+                          <option value="none">None</option>
+                          {gradingSystems?.map((item) => (
+                            <option className="text-black" value={item.id} key={item.id}>{item.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+
+                      {/* Actions Buttons */}
+                      <div className="flex items-end gap-3">
+                        <button
+                          onClick={handleCloseSetUpActionForm}
+                          type="button"
+                          className="h-[39px] flex items-center justify-center px-12 border border-[#0000001F] bg-white rounded-full text-[14px] font-normal cursor-pointer shrink-0"
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={editingSetUp ? handleUpdateSetUp : handleSaveSetUp}
+                          className="h-[39px] flex items-center justify-center gap-1.5 px-6 bg-[#228B22] hover:bg-[#1e7b1e] rounded-full text-white text-[14px] font-semibold cursor-pointer shrink-0"
+                        >
+                          <Save className="size-[15px] shrink-0" />
+                          <span>{editingSetUp ? 'Update Set Up' : 'Save Set Up'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Exam Format Form Table */}
+                    <div className="border border-[#0000001F] rounded-tl-[8px] rounded-tr-[8px] overflow-hidden mt-2">
+                      <table className="w-full table-fixed">
+                        {/* Column Group */}
+                        <colgroup>
+                          <col style={{ width: "5%" }} />
+                          <col style={{ width: "25%" }} />
+                          <col style={{ width: "9.285%" }} />
+                          <col style={{ width: "9.285%" }} />
+                          <col style={{ width: "9.285%" }} />
+                          <col style={{ width: "9.285%" }} />
+                          <col style={{ width: "9.285%" }} />
+                          <col style={{ width: "9.285%" }} />
+                          <col style={{ width: "9.285%" }} />
+                          <col style={{ width: "5%" }} />
+                        </colgroup>
+
+                        {/* Table Header */}
+                        <thead>
+                          <tr className="bg-[#A8A8A833] border-b-2 border-[#0000001F]">
+                            <th className="text-[14px] font-[500] py-[13px] px-2 text-center leading-none">No</th>
+                            <th className="text-[14px] text-left font-[500] py-[13px] px-2 leading-none">Subject</th>
+                            <th className="text-[14px] text-left font-[500] py-[13px] px-2 leading-none">Date</th>
+                            <th className="text-[14px] font-[500] py-[13px] px-2 text-left leading-none">Start Time</th>
+                            <th className="text-[14px] font-[500] py-[13px] px-2 text-left leading-none">End Time</th>
+                            <th className="text-[14px] font-[500] py-[13px] px-2 text-left leading-none">Duration</th>
+                            <th className="text-[14px] font-[500] py-[13px] px-2 text-left leading-none">Maxi Mark</th>
+                            <th className="text-[14px] font-[500] py-[13px] px-2 text-left leading-none">Pass Mark</th>
+                            <th className="text-[14px] font-[500] py-[13px] px-2 text-left leading-none">D - Mark</th>
+                            <th className="text-[14px] font-[500] py-[13px] px-2 text-left leading-none">Active</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {setUpForm.formats.map((format, index) => (
+                            <tr key={format.id} className="border-b border-[#0000001F]">
+                              <td className="font-normal text-[14px] py-[10px] px-2 text-center">{index + 1}</td>
+
+                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">{format.subject_name}</td>
+
+                              {/* Date */}
+                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                <input
+                                  type="date"
+                                  value={format.date ?? ""}
+                                  name="date"
+                                  onChange={(e) => handleFormatChange(format.id, e)}
+                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
+                                />
+                              </td>
+
+                              {/* Start Time */}
+                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                <input
+                                  type="time"
+                                  value={format.start_time ?? ""}
+                                  name="start_time"
+                                  onChange={(e) => handleFormatChange(format.id, e)}
+                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
+                                />
+                              </td>
+
+                              {/* End Time */}
+                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                <input
+                                  type="time"
+                                  value={format.end_time ?? ""}
+                                  name="end_time"
+                                  onChange={(e) => handleFormatChange(format.id, e)}
+                                  placeholder="100"
+                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
+                                />
+                              </td>
+
+                              {/* Duration */}
+                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                <input
+                                  type="text"
+                                  value={format.duration ?? '-'}
+                                  name="duration"
+                                  disabled
+                                  onChange={(e) => handleFormatChange(format.id, e)}
+                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none bg-[#D9D9D980] text-center"
+                                />
+                              </td>
+
+                              {/* Max Mark */}
+                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                <input
+                                  type="text"
+                                  value={format.max_mark ?? ""}
+                                  name="max_mark"
+                                  onChange={(e) => handleFormatChange(format.id, e)}
+                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-center text-[14px] focus:outline-none focus:border-[#228B22]"
+                                />
+                              </td>
+
+                              {/* Pass Mark */}
+                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                <input
+                                  type="text"
+                                  value={format.pass_mark ?? ""}
+                                  name="pass_mark"
+                                  onChange={(e) => handleFormatChange(format.id, e)}
+                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-center text-[14px] focus:outline-none focus:border-[#228B22]"
+                                />
+                              </td>
+
+                              {/* D Mark */}
+                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                <input
+                                  type="text"
+                                  value={format.d_mark ?? ""}
+                                  name="d_mark"
+                                  onChange={(e) => handleFormatChange(format.id, e)}
+                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
+                                />
+                              </td>
+
+                              {/* Switch */}
+                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                <Switch
+                                  checked={format.is_active}
+                                  onChange={() => handleToggleSetUpActive(format.id)}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Setup Table */}
+                    {examSetUps?.length > 0 ? (
+                      <div className="space-y-2 overflow-hidden overflow-y-auto scrollbar-hide">
+                        {examSetUps.map((setUp, index) => (
+                          <div key={setUp.id} className="border border-[#0000001F] rounded-[8px] p-4 flex-1 flex flex-col gap-3">
+                            {/* Set Up Title And Actions Buttons */}
+                            <div className="flex items-center justify-between">
+                              <h1 className="font-semibold text-[18px]">{`${getExamName(setUp.exam_type_id)} / (${getGradingSystemName(setUp.grading_system_id)})`}</h1>
+
+                              <div className="flex items-center gap-2">
+                                {/* Edit Button */}
+                                <button
+                                  onClick={() => handleEditSetUp(setUp)}
+                                  className="flex items-center gap-1 border border-[#2F00FF1A] rounded-[6px] h-[39px] px-4 bg-[#2F00FF1A] text-[#2F00FF] text-[14px]">
+                                  <Pencil className="size-[14px]" />
+                                  Edit
+                                </button>
+
+                                {/* Delete Button */}
+                                <button
+                                  onClick={() => handleDeleteSetUp(setUp.id)}
+                                  className="flex items-center gap-1 border border-[#FF00001A] rounded-[6px] h-[39px] px-4 bg-[#FF00001A] text-[#FF0000] text-[14px]">
+                                  <Trash2 className="size-[14px]" />
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Format Table */}
+                            <div className="border border-[#0000001F] rounded-tl-[8px] rounded-tr-[8px] overflow-hidden">
+                              <table className="w-full table-fixed">
+                                {/* Column Group */}
+                                <colgroup>
+                                  <col style={{ width: "5%" }} />
+                                  <col style={{ width: "25%" }} />
+                                  <col style={{ width: "10%" }} />
+                                  <col style={{ width: "10%" }} />
+                                  <col style={{ width: "10%" }} />
+                                  <col style={{ width: "10%" }} />
+                                  <col style={{ width: "10%" }} />
+                                  <col style={{ width: "10%" }} />
+                                  <col style={{ width: "10%" }} />
+                                </colgroup>
+
+                                {/* Table Header */}
+                                <thead>
+                                  <tr className="bg-[#A8A8A833] border-b-2 border-[#0000001F]">
+                                    <th className="text-[14px] font-[500] py-[13px] px-2 text-center leading-none">No</th>
+                                    <th className="text-[14px] text-left font-[500] py-[13px] px-2 leading-none">Subject</th>
+                                    <th className="text-[14px] font-[500] py-[13px] px-2 text-left leading-none">Date</th>
+                                    <th className="text-[14px] font-[500] py-[13px] px-2 text-center leading-none">Start Time</th>
+                                    <th className="text-[14px] font-[500] py-[13px] px-2 text-center leading-none">End Time</th>
+                                    <th className="text-[14px] font-[500] py-[13px] px-2 text-center leading-none">Duration</th>
+                                    <th className="text-[14px] font-[500] py-[13px] px-2 text-center leading-none">Max Mark</th>
+                                    <th className="text-[14px] font-[500] py-[13px] px-2 text-center leading-none">Pass Mark</th>
+                                    <th className="text-[14px] font-[500] py-[13px] px-2 text-center leading-none">D - Mark</th>
+                                  </tr>
+                                </thead>
+
+                                <tbody>
+                                  {setUp.formats?.map((format, index) => (
+                                    <tr key={format.id ?? format.subject_id} className="border-b border-[#0000001F]">
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{index + 1}</td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-left">{getSubjectName(format.subject_id)}</td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-left">{format.date}</td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.start_time}</td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.end_time}</td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.duration} Min</td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.max_mark}</td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.pass_mark}</td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.d_mark}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      // Show No Data found
+                      <div className="flex-1 border border-[#0000001F] rounded-[8px] flex items-center justify-center">
+                        <div className="w-full max-w-[300px] flex flex-col gap-3 items-center">
+                          {/* Icon */}
+                          <div className="size-[100px] bg-[#D9D9D9] rounded-full flex items-center justify-center">
+                            <Settings className="size-[55px]" />
+                          </div>
+
+                          {/* Text */}
+                          <div className="flex flex-col text-center">
+                            <h2 className="font-semibold text-[18px]">No Set Up Found !</h2>
+                            <p className="font-normal text-[14px] text-[#00000099]">Click the button to add a new set up.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : (
+              // Grades container
+              <div className="grid grid-cols-4 gap-6">
+                {/* Grade Card */}
+                {grades.map((grade) => (
+                  <div key={grade.id} className="relative h-[70px] group border border-[#0000001F] bg-[#D9D9D980] rounded-[8px] flex items-center justify-between px-4 overflow-hidden">
+                    <h2 className="font-semibold text-[14px]">{grade.label}</h2>
+                    <ChevronRightSquare size={22} className="text-[#0000001F] group-hover:text-black transition-colors duration-200" />
+                    <button onClick={() => handleSelectSetUpGrade(grade.id)} className="absolute inset-0 z-10 bg-transparent active:bg-[#efefef80] size-full cursor-pointer" />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
