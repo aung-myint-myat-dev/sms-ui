@@ -3,6 +3,7 @@ import { calculateDuration, getExamName, getGradingSystemName, getStudentName, g
 import { classes, exam_setups, exam_types, grades, grading_systems, studentMarks, students, subjects } from "./data";
 import { Switch } from "./components/ui/Switch";
 import { Check, ChevronLeft, ChevronRightSquare, File, FileText, GraduationCap, NotebookPen, Pencil, PencilLineIcon, Plus, Save, Search, Settings, Trash2, X } from "lucide-react";
+import { isExamTimeOverlapping, isRangeOverlapping, validateGradingSystemForm } from "./validation";
 
 export function Exams() {
   // Tab
@@ -156,9 +157,11 @@ export function Exams() {
       window.alert('Delete the exam setups using this exam type before deleting it.');
       return;
     }
-    const examtypes = examTypes.filter((item) => item.id !== exam.id)
-    setExamTypes(examtypes)
-    console.log(exam)
+    if(window.confirm('Are you sure want to delete?')) {
+      const examtypes = examTypes.filter((item) => item.id !== exam.id)
+      setExamTypes(examtypes)
+      console.log(exam)
+    }
   }
   const handleToggleExamTypeActiveStatus = (exam) => {
     // Patch exam type status API call here
@@ -218,40 +221,71 @@ export function Exams() {
   const [editingGradingSystem, setEditingGradingSystem] = useState(null)
   const lastRange = gradingSystemForm.ranges.at(-1)
   const isRangeIncomplete = !lastRange?.grading.trim() || lastRange?.from === '' || lastRange?.to === ''
-  const makeEmptyGradingForm = () => ({ name: '', max_mark: '', pass_mark: '', ranges: [{ id: crypto.randomUUID(), grading: '', from: '', to: '' }] });
+  const makeEmptyGradingForm = () => ({
+    name: '',
+    max_mark: '',
+    pass_mark: '',
+    ranges: [{
+      id: '',
+      grading: '',
+      from: '',
+      to: ''
+    }]
+  });
+
   const validateGrading = () => {
     const max = Number(gradingSystemForm.max_mark);
     const pass = Number(gradingSystemForm.pass_mark);
     const ranges = gradingSystemForm.ranges;
-    const valid = gradingSystemForm.name.trim() && gradingSystemForm.max_mark !== '' &&
-      Number.isFinite(max) && max > 0 && gradingSystemForm.pass_mark !== '' && pass >= 0 && pass <= max &&
-      ranges.length > 0 && ranges.every(r => r.grading.trim() && r.from !== '' && r.to !== '' &&
-        Number(r.from) >= 0 && Number(r.to) <= max && Number(r.from) <= Number(r.to)) &&
+    const valid = gradingSystemForm.name.trim() &&
+      gradingSystemForm.max_mark !== '' && Number.isFinite(max) &&
+      max > 0 && gradingSystemForm.pass_mark !== '' &&
+      pass >= 0 && pass <= max &&
+      ranges.length > 0 &&
+      ranges.every(r => r.grading.trim() &&
+        r.from !== '' && r.to !== '' &&
+        Number(r.from) >= 0 && Number(r.to) <= max &&
+        Number(r.from) <= Number(r.to)) &&
       ranges.every((r, i) => ranges.every((other, j) => i === j ||
         Number(r.to) < Number(other.from) || Number(r.from) > Number(other.to)));
-    if (!valid) window.alert('Check grading name, max/pass marks, and non-overlapping valid ranges.');
     return Boolean(valid);
   };
+
   const handleCreateGradingSystem = () => {
     setGradingSystemForm(makeEmptyGradingForm())
     setShowGradingSystemActionForm(true)
     setEditingGradingSystem(null)
   }
   const handleSaveGradingSystem = () => {
-    // Store grading system API call here
+    // Validation
+    const validation = validateGradingSystemForm(gradingSystemForm)
 
-    //demo action
-    if (!validateGrading()) return;
+    if (!validation.isValid) {
+      setGradingSystemFormErrors(validation.errors)
+      return alert('Please fill all field')
+    }
+
+    // Generate next grading system ID
+    const nextId = Math.max(0, ...gradingSystems.map((item) => Number(item.id) || 0)) + 1;
     const payload = {
       ...gradingSystemForm,
+      id: nextId,
       max_mark: Number(gradingSystemForm.max_mark),
       pass_mark: Number(gradingSystemForm.pass_mark),
-      ranges: gradingSystemForm.ranges.map(r => ({ ...r, from: Number(r.from), to: Number(r.to) })),
-      id: Math.max(0, ...gradingSystems.map(g => Number(g.id))) + 1
-    }
-    setGradingSystems(prev => [...prev, payload])
+
+      ranges: (gradingSystemForm.ranges ?? []).map((range, index) => ({
+        ...range,
+        id: index + 1,
+        from: Number(range.from),
+        to: Number(range.to),
+      })),
+    };
+
+    // Demo action
+    setGradingSystems((prev) => [...prev, payload]);
+
     handleCloseGradingSystemActionForm();
-  }
+  };
   const handleEditGradingSystem = (grading) => {
     setEditingGradingSystem(grading)
     setGradingSystemForm({ ...grading, ranges: grading.ranges.map(r => ({ ...r })) })
@@ -275,9 +309,11 @@ export function Exams() {
       window.alert('Delete or update the exam setups using this grading system before deleting it.');
       return;
     }
-    const systems = gradingSystems.filter((item) => item.id !== id)
-    setGradingSystems(systems)
-    handleCloseGradingSystemActionForm();
+    if(window.confirm('Are you sure want to delte?')) {
+      const systems = gradingSystems.filter((item) => item.id !== id)
+      setGradingSystems(systems)
+      handleCloseGradingSystemActionForm();
+    }
   }
   const handleCloseGradingSystemActionForm = () => {
     setShowGradingSystemActionForm(false)
@@ -564,7 +600,7 @@ export function Exams() {
   const searchTerm = deferredSearch.trim().toLocaleLowerCase();
   const filteredStudentMarks = searchTerm ? selectedStudentMarks.filter(({ student }) => getStudentName(student.id).toLocaleLowerCase().includes(searchTerm)) : selectedStudentMarks;
   const sortedStudentMarks = useMemo(() => {
-    return [...filteredStudentMarks].sort((a,b) => Number(b.total) - Number(a.total))
+    return [...filteredStudentMarks].sort((a, b) => Number(b.total) - Number(a.total))
   }, [filteredStudentMarks])
   const rankedStudents = [...selectedStudentMarks].sort((a, b) => Number(b.total) - Number(a.total));
 
@@ -1082,10 +1118,17 @@ export function Exams() {
                       <input
                         name="max_mark"
                         value={gradingSystemForm.max_mark ?? ""}
-                        onChange={(e) => handleChange(e, setGradingSystemForm)}
+                        onChange={(e) => {
+                          handleChange(e, setGradingSystemForm);
+                          setGradingSystemForm((prev) => ({
+                            ...prev,
+                            pass_mark: ""
+                          }))
+                        }}
                         placeholder="Enter exam maximum marks ..."
                         id="max_mark"
                         type="number"
+                        min={0}
                         className="border border-[#0000001F] rounded-[8px] w-full py-2 px-4 font-normal text-[14px] focus:outline-none bg-white" />
                     </div>
 
@@ -1098,6 +1141,9 @@ export function Exams() {
                         onChange={(e) => handleChange(e, setGradingSystemForm)}
                         placeholder="Enter exam pass marks ..."
                         type="number"
+                        min={0}
+                        max={gradingSystemForm?.max_mark ?? 400}
+                        disabled={!gradingSystemForm.max_mark.trim() || Number(gradingSystemForm.max_mark) === 0}
                         className="border border-[#0000001F] rounded-[8px] w-full py-2 px-4 font-normal text-[14px] focus:outline-none bg-white" />
                     </div>
 
@@ -1168,7 +1214,9 @@ export function Exams() {
                                   name="from"
                                   onChange={(e) => handleRangeChange(range.id, e)}
                                   placeholder="80"
-                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
+                                  min={0}
+                                  max={gradingSystemForm.max_mark ?? 400}
+                                  className={`border ${isRangeOverlapping(range, gradingSystemForm.ranges, gradingSystemForm.max_mark, gradingSystemForm.pass_mark) ? 'border-red-500' : 'border-[#0000001F] focus:border-[#228B22]'} rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none`}
                                 />
                               </td>
                               <td className="font-normal text-[14px] py-[10px] px-2 text-left">
@@ -1178,7 +1226,9 @@ export function Exams() {
                                   name="to"
                                   onChange={(e) => handleRangeChange(range.id, e)}
                                   placeholder="100"
-                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
+                                  min={0}
+                                  max={gradingSystemForm.max_mark ?? 400}
+                                  className={`border ${isRangeOverlapping(range, gradingSystemForm.ranges, gradingSystemForm.max_mark, gradingSystemForm.pass_mark) ? 'border-red-500' : 'border-[#0000001F] focus:border-[#228B22]'} rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none `}
                                 />
                               </td>
                               <td>
@@ -1207,13 +1257,13 @@ export function Exams() {
                 {gradingSystems?.length > 0 ? (
                   <div className="h-full overflow-hidden space-y-2 overflow-y-auto scrollbar-hide">
                     {/* Grading System Cards */}
-                    {gradingSystems.map((grading) => (
-                      <div key={grading.id} className="border border-[#0000001F] rounded-[8px] pt-4 pb-2 px-4">
+                    {gradingSystems?.map((grading) => (
+                      <div key={grading?.id} className="border border-[#0000001F] rounded-[8px] pt-4 pb-2 px-4">
                         {/* Card Title & Action Buttons */}
                         <div className="flex items-center">
                           <div className="flex flex-col gap-1 flex-1">
-                            <h2 className="font-semibold text-[18px]">{grading.name}</h2>
-                            <p className="text-[12px] text-[#483939CC]">Maximum Mark - <span className="text-green-700">{grading.max_mark}</span> / Pass Mark - <span className="text-red-700">{grading.pass_mark}</span></p>
+                            <h2 className="font-semibold text-[18px]">{grading?.name}</h2>
+                            <p className="text-[12px] text-[#483939CC]">Maximum Mark - <span className="text-green-700">{grading?.max_mark}</span> / Pass Mark - <span className="text-red-700">{grading?.pass_mark}</span></p>
                           </div>
 
                           {/* Action Buttons */}
@@ -1228,7 +1278,7 @@ export function Exams() {
 
                             {/* Delete Button */}
                             <button
-                              onClick={() => handleDleteGradingSystem(grading.id)}
+                              onClick={() => handleDleteGradingSystem(grading?.id)}
                               className="flex items-center gap-1 border border-[#FF00001A] rounded-[6px] h-[39px] px-4 bg-[#FF00001A] text-[#FF0000] text-[14px]">
                               <Trash2 className="size-[14px]" />
                               Delete
@@ -1258,12 +1308,12 @@ export function Exams() {
                             </thead>
 
                             <tbody>
-                              {grading.ranges.map((range) => (
-                                <tr key={range.id} className="border-b border-[#0000001F]">
-                                  <td className="font-normal text-[14px] py-[10px] px-2 text-center">{range.id}</td>
-                                  <td className="font-normal text-[14px] py-[10px] px-2 text-left">{range.grading}</td>
-                                  <td className="font-normal text-[14px] py-[10px] px-2 text-center">{range.from}</td>
-                                  <td className="font-normal text-[14px] py-[10px] px-2 text-center">{range.to}</td>
+                              {grading?.ranges.map((range) => (
+                                <tr key={range?.id} className="border-b border-[#0000001F]">
+                                  <td className="font-normal text-[14px] py-[10px] px-2 text-center">{range?.id}</td>
+                                  <td className="font-normal text-[14px] py-[10px] px-2 text-left">{range?.grading}</td>
+                                  <td className="font-normal text-[14px] py-[10px] px-2 text-center">{range?.from}</td>
+                                  <td className="font-normal text-[14px] py-[10px] px-2 text-center">{range?.to}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -1416,116 +1466,126 @@ export function Exams() {
                         </thead>
 
                         <tbody>
-                          {/* Set Up Format Form Row */}
-                          {setUpForm.formats.map((format, index) => (
-                            <tr key={format.id} className="border-b border-[#0000001F]">
-                              <td className="font-normal text-[14px] py-[10px] px-2 text-center">{index + 1}</td>
+                          {/* Setup Format Form Row */}
+                          {setUpForm.formats.map((format, index) => {
+                            const isOverlapingTime = isExamTimeOverlapping(format, setUpForm.formats)
+                            const inputClassName = `border rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none ${isOverlapingTime ? "border-red-500 focus:border-red-500" : "border-[#0000001F] focus:border-[#228B22]"}`;
 
-                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">{format.subject_name}</td>
+                            console.log(isOverlapingTime)
+                            return (
+                              <tr key={format.id} className="border-b border-[#0000001F]">
+                                <td className="font-normal text-[14px] py-[10px] px-2 text-center">{index + 1}</td>
 
-                              {/* Date */}
-                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
-                                <input
-                                  type="date"
-                                  value={format.date ?? ""}
-                                  name="date"
-                                  onChange={(e) => handleFormatChange(format.id, e)}
-                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
-                                />
-                              </td>
+                                <td className="font-normal text-[14px] py-[10px] px-2 text-left">{format.subject_name}</td>
 
-                              {/* Start Time */}
-                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
-                                <input
-                                  type="time"
-                                  value={format.start_time ?? ""}
-                                  name="start_time"
-                                  onChange={(e) => handleFormatChange(format.id, e)}
-                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
-                                />
-                              </td>
+                                {/* Date */}
+                                <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                  <input
+                                    type="date"
+                                    value={format.date ?? ""}
+                                    name="date"
+                                    onChange={(e) => handleFormatChange(format.id, e)}
+                                    className={inputClassName}
+                                  />
+                                </td>
 
-                              {/* End Time */}
-                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
-                                <input
-                                  type="time"
-                                  value={format.end_time ?? ""}
-                                  name="end_time"
-                                  onChange={(e) => handleFormatChange(format.id, e)}
-                                  placeholder="100"
-                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
-                                />
-                              </td>
+                                {/* Start Time */}
+                                <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                  <input
+                                    type="time"
+                                    value={format.start_time ?? ""}
+                                    name="start_time"
+                                    onChange={(e) => handleFormatChange(format.id, e)}
+                                    className={inputClassName}
+                                  />
+                                </td>
 
-                              {/* Duration */}
-                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
-                                <input
-                                  type="text"
-                                  value={format.duration ?? '-'}
-                                  name="duration"
-                                  disabled
-                                  onChange={(e) => handleFormatChange(format.id, e)}
-                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none bg-[#D9D9D980] text-center"
-                                />
-                              </td>
+                                {/* End Time */}
+                                <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                  <input
+                                    type="time"
+                                    value={format.end_time ?? ""}
+                                    name="end_time"
+                                    onChange={(e) => handleFormatChange(format.id, e)}
+                                    placeholder="100"
+                                    className={inputClassName}
+                                  />
+                                </td>
 
-                              {/* Max Mark */}
-                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
-                                <input
-                                  type="text"
-                                  value={format.max_mark ?? ""}
-                                  name="max_mark"
-                                  onChange={(e) => handleFormatChange(format.id, e)}
-                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-center text-[14px] focus:outline-none focus:border-[#228B22]"
-                                />
-                              </td>
+                                {/* Duration */}
+                                <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                  <input
+                                    type="text"
+                                    value={format.duration ?? '-'}
+                                    name="duration"
+                                    disabled
+                                    onChange={(e) => handleFormatChange(format.id, e)}
+                                    className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none bg-[#D9D9D980] text-center"
+                                  />
+                                </td>
 
-                              {/* Pass Mark */}
-                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
-                                <input
-                                  type="text"
-                                  value={format.pass_mark ?? ""}
-                                  name="pass_mark"
-                                  onChange={(e) => handleFormatChange(format.id, e)}
-                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-center text-[14px] focus:outline-none focus:border-[#228B22]"
-                                />
-                              </td>
+                                {/* Max Mark */}
+                                <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                  <input
+                                    type="text"
+                                    value={format.max_mark ?? ""}
+                                    name="max_mark"
+                                    onChange={(e) => handleFormatChange(format.id, e)}
+                                    className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-center text-[14px] focus:outline-none focus:border-[#228B22]"
+                                  />
+                                </td>
 
-                              {/* D Mark */}
-                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
-                                <input
-                                  type="text"
-                                  value={format.d_mark ?? ""}
-                                  name="d_mark"
-                                  onChange={(e) => handleFormatChange(format.id, e)}
-                                  className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
-                                />
-                              </td>
+                                {/* Pass Mark */}
+                                <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                  <input
+                                    type="text"
+                                    value={format.pass_mark ?? ""}
+                                    name="pass_mark"
+                                    onChange={(e) => handleFormatChange(format.id, e)}
+                                    className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-center text-[14px] focus:outline-none focus:border-[#228B22]"
+                                  />
+                                </td>
 
-                              {/* Switch */}
-                              <td className="font-normal text-[14px] py-[10px] px-2 text-left">
-                                <Switch
-                                  checked={format.is_active}
-                                  onChange={() => handleToggleSetUpActive(format.id)}
-                                />
-                              </td>
-                            </tr>
-                          ))}
+                                {/* D Mark */}
+                                <td className="font-normal text-[14px] py-[10px] px-2">
+                                  <input
+                                    type="text"
+                                    value={format.d_mark ?? ""}
+                                    name="d_mark"
+                                    onChange={(e) => handleFormatChange(format.id, e)}
+                                    className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] text-center focus:outline-none focus:border-[#228B22]"
+                                  />
+                                </td>
+
+                                {/* Switch */}
+                                <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                  <Switch
+                                    checked={format.is_active}
+                                    onChange={() => handleToggleSetUpActive(format.id)}
+                                  />
+                                </td>
+                              </tr>
+                            )
+                          })}
                         </tbody>
                       </table>
                     </div>
                   </div>
                 ) : (
                   <>
-                    {/* Setup Table */}
+                    {/* If exam setups lenght is grater than 0 */}
                     {examSetUps?.length > 0 ? (
+                      // Exam setup cards container
                       <div className="space-y-2 overflow-hidden overflow-y-auto scrollbar-hide">
-                        {examSetUps.map((setUp, index) => (
+                        {examSetUps.map((setUp) => (
+                          // Exam setup card
                           <div key={setUp.id} className="border border-[#0000001F] rounded-[8px] p-4 flex-1 flex flex-col gap-3">
-                            {/* Set Up Title And Actions Buttons */}
+                            {/* Title, edit and delete buttons */}
                             <div className="flex items-center justify-between">
+                              {/* Title */}
                               <h1 className="font-semibold text-[18px]">{`${getExamName(setUp.exam_type_id, examTypes)} / (${getGradingSystemName(setUp.grading_system_id, gradingSystems) || 'No grading system'})`}</h1>
 
+                              {/* Action buttons container */}
                               <div className="flex items-center gap-2">
                                 {/* Edit Button */}
                                 <button
@@ -1545,7 +1605,7 @@ export function Exams() {
                               </div>
                             </div>
 
-                            {/* Format Table */}
+                            {/* Exam setup's formats table */}
                             <div className="border border-[#0000001F] rounded-tl-[8px] rounded-tr-[8px] overflow-hidden">
                               <table className="w-full table-fixed">
                                 {/* Column Group */}
@@ -1578,16 +1638,31 @@ export function Exams() {
 
                                 <tbody>
                                   {setUp.formats?.map((format, index) => (
-                                    <tr key={format.id ?? format.subject_id} className="border-b border-[#0000001F]">
+                                    <tr key={format.id ?? format.subject_id} className={`border-b border-[#0000001F] ${!format.is_active && 'text-zinc-400'}`}>
                                       <td className="font-normal text-[14px] py-[10px] px-2 text-center">{index + 1}</td>
                                       <td className="font-normal text-[14px] py-[10px] px-2 text-left">{getSubjectName(format.subject_id)}</td>
-                                      <td className="font-normal text-[14px] py-[10px] px-2 text-left">{format.date}</td>
-                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.start_time}</td>
-                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.end_time}</td>
-                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.duration} Min</td>
-                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.max_mark}</td>
-                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.pass_mark}</td>
-                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">{format.d_mark}</td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                                        {format.is_active ? format.date : '-'}
+
+                                      </td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">
+                                        {format.is_active ? format.start_time : '-'}
+                                      </td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">
+                                        {format.is_active ? format.end_time : '-'}
+                                      </td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">
+                                        {format.is_active ? `${format.duration} min` : ''}
+                                      </td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">
+                                        {format.is_active ? format.max_mark : '-'}
+                                      </td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">
+                                        {format.is_active ? format.pass_mark : '-'}
+                                      </td>
+                                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">
+                                        {format.is_active ? format.d_mark : '-'}
+                                      </td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -1597,7 +1672,7 @@ export function Exams() {
                         ))}
                       </div>
                     ) : (
-                      // Show No Data found
+                      // If no exam setups found,
                       <div className="flex-1 border border-[#0000001F] rounded-[8px] flex items-center justify-center">
                         <div className="w-full max-w-[300px] flex flex-col gap-3 items-center">
                           {/* Icon */}
