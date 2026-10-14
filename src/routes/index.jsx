@@ -4,10 +4,11 @@ import { Home } from '../pages/home';
 import { Payments } from '../pages/settings/payments';
 import { StudentBanks } from '../pages/student-bank';
 import { BankDetail } from '../pages/student-bank/show';
-import { Policies } from '../pages/settings/policies';
+// import { Policies } from '../pages/settings/policies';
 import { PolicyActionForm } from '../pages/settings/policies/action';
 import { SchoolProfile } from '../pages/settings/school-profile';
 import Exams from '../pages/exam-clean-architecture/Exams';
+import Policies from '../pages/settings/policies-clean-architecture/Policies';
 // import { Exams } from '../pages/settings/exams';
 // import { ExamsProduction } from '../pages/settings/exams/exam.production';
 
