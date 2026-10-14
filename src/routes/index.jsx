@@ -7,8 +7,9 @@ import { BankDetail } from '../pages/student-bank/show';
 import { Policies } from '../pages/settings/policies';
 import { PolicyActionForm } from '../pages/settings/policies/action';
 import { SchoolProfile } from '../pages/settings/school-profile';
-import { Exams } from '../pages/settings/exams';
-import { ExamsProduction } from '../pages/settings/exams/exam.production';
+import Exams from '../pages/exam-clean-architecture/Exams';
+// import { Exams } from '../pages/settings/exams';
+// import { ExamsProduction } from '../pages/settings/exams/exam.production';
 
 export const router = createBrowserRouter([
   {
