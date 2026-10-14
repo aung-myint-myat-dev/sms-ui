@@ -111,6 +111,39 @@ export const classes = [
   { id: 26, grade_id: 13, label: "Grade 12-B", value: "12_b" }
 ];
 
+export const students = [
+  {
+    id: 1,
+    class_id: 23,
+    student_name: "မောင်မောင်",
+  },
+  {
+    id: 2,
+    class_id: 23,
+    student_name: "မမ",
+  },
+  {
+    id: 3,
+    class_id: 23,
+    student_name: "အောင်အောင်",
+  },
+  {
+    id: 4,
+    class_id: 1,
+    student_name: "Ko Ko",
+  },
+  {
+    id: 5,
+    class_id: 1,
+    student_name: "Thae Lay",
+  },
+  {
+    id: 6,
+    class_id: 1,
+    student_name: "Chit Chit",
+  },
+];
+
 export const exam_types = [
   { id: 1, name: "Monthly Test (လစဉ်စစ်ဆေးမှု)", has_report_card: false, is_active: true },
   { id: 2, name: "First Term Exam (ပထမနှစ်ဝက် စာမေးပွဲ)", has_report_card: true, is_active: true },
@@ -119,66 +152,6 @@ export const exam_types = [
 ];
 
 export const studentMarks = [
-  {
-    id: 1,
-    class_id: 23, // Grade 11-A (id: 23)
-    exam_id: 2,  // First Term Exam (id: 2)
-    roll: "1",
-    student_name: "မောင်မောင်",
-    myanmar: 85,
-    english: 80,
-    math: 90,
-    physic: 75,
-    chemistry: 70,
-    bio: 82,
-    total: 482,
-    rank: 1
-  },
-  {
-    id: 2,
-    class_id: 23, // Grade 11-A
-    exam_id: 2,
-    roll: "2",
-    student_name: "မမ",
-    myanmar: 90,
-    english: 88,
-    math: 95,
-    physic: 85,
-    chemistry: 80,
-    bio: 88,
-    total: 526,
-    rank: 2
-  },
-  {
-    id: 3,
-    class_id: 23, // Grade 11-A
-    exam_id: 2,
-    roll: "5",
-    student_name: "Ko Nyein Maung",
-    myanmar: null,
-    english: null,
-    math: null,
-    physic: null,
-    chemistry: null,
-    bio: null,
-    total: null,
-    rank: null,
-  },
-  {
-    id: 3,
-    class_id: 1, // KG-A (id: 1)
-    exam_id: 2,
-    roll: "1",
-    student_name: "အောင်အောင်",
-    myanmar: 75,
-    english: 70,
-    math: 80,
-    physic: 0,
-    chemistry: 0,
-    bio: 0,
-    total: 225,
-    rank: 1
-  }
 ];
 
 export const grading_systems = [
@@ -212,304 +185,6 @@ export const grading_systems = [
     ],
   },
 ];
-
-
-// export const exam_setups = [
-//   {
-//     "id": 1,
-//     "exam_type_id": "1",
-//     "grading_system_id": 1,
-//     "grade_id": 6,
-//     "grade_name": "Grade 5",
-//     "formats": [
-//       {
-//         "id": "e1a2b3c4-1111-2222-3333-444455556661",
-//         "subject_id": 1,
-//         "subject_name": "Myanmar",
-//         "date": "2026-11-01",
-//         "start_time": "09:00",
-//         "end_time": "11:30",
-//         "duration": 150,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "75",
-//         "is_active": true
-//       },
-//       {
-//         "id": "e1a2b3c4-1111-2222-3333-444455556662",
-//         "subject_id": 2,
-//         "subject_name": "English",
-//         "date": "2026-11-02",
-//         "start_time": "09:00",
-//         "end_time": "11:30",
-//         "duration": 150,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "75",
-//         "is_active": true
-//       },
-//       {
-//         "id": "e1a2b3c4-1111-2222-3333-444455556663",
-//         "subject_id": 3,
-//         "subject_name": "Mathematics",
-//         "date": "2026-11-03",
-//         "start_time": "09:00",
-//         "end_time": "11:30",
-//         "duration": 150,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "75",
-//         "is_active": true
-//       },
-//       {
-//         "id": "e1a2b3c4-1111-2222-3333-444455556664",
-//         "subject_id": 4,
-//         "subject_name": "Science",
-//         "date": "2026-11-04",
-//         "start_time": "09:00",
-//         "end_time": "10:30",
-//         "duration": 90,
-//         "max_mark": 75,
-//         "pass_mark": 30,
-//         "d_mark": "60",
-//         "is_active": true
-//       },
-//       {
-//         "id": "e1a2b3c4-1111-2222-3333-444455556665",
-//         "subject_id": 5,
-//         "subject_name": "Social Studies",
-//         "date": "2026-11-05",
-//         "start_time": "09:00",
-//         "end_time": "10:30",
-//         "duration": 90,
-//         "max_mark": 75,
-//         "pass_mark": 30,
-//         "d_mark": "60",
-//         "is_active": true
-//       }
-//     ]
-//   },
-//   {
-//     id: 2,
-//     "exam_type_id": "1",
-//     "grading_system_id": 1,
-//     "grade_id": 6,
-//     "grade_name": "Grade 5",
-//     "formats": [
-//       {
-//         "id": "e1a2b3c4-1111-2222-3333-444455556661",
-//         "subject_id": 1,
-//         "subject_name": "Myanmar",
-//         "date": "2026-11-01",
-//         "start_time": "09:00",
-//         "end_time": "11:30",
-//         "duration": 150,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "75",
-//         "is_active": true
-//       },
-//       {
-//         "id": "e1a2b3c4-1111-2222-3333-444455556662",
-//         "subject_id": 2,
-//         "subject_name": "English",
-//         "date": "2026-11-02",
-//         "start_time": "09:00",
-//         "end_time": "11:30",
-//         "duration": 150,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "75",
-//         "is_active": true
-//       },
-//       {
-//         "id": "e1a2b3c4-1111-2222-3333-444455556663",
-//         "subject_id": 3,
-//         "subject_name": "Mathematics",
-//         "date": "2026-11-03",
-//         "start_time": "09:00",
-//         "end_time": "11:30",
-//         "duration": 150,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "75",
-//         "is_active": true
-//       },
-//       {
-//         "id": "e1a2b3c4-1111-2222-3333-444455556664",
-//         "subject_id": 4,
-//         "subject_name": "Science",
-//         "date": "2026-11-04",
-//         "start_time": "09:00",
-//         "end_time": "10:30",
-//         "duration": 90,
-//         "max_mark": 75,
-//         "pass_mark": 30,
-//         "d_mark": "60",
-//         "is_active": true
-//       },
-//       {
-//         "id": "e1a2b3c4-1111-2222-3333-444455556665",
-//         "subject_id": 5,
-//         "subject_name": "Social Studies",
-//         "date": "2026-11-05",
-//         "start_time": "09:00",
-//         "end_time": "10:30",
-//         "duration": 90,
-//         "max_mark": 75,
-//         "pass_mark": 30,
-//         "d_mark": "60",
-//         "is_active": true
-//       }
-//     ]
-//   },
-//   {
-//     "exam_type_id": "2",
-//     "grading_system_id": 2,
-//     "grade_id": 9,
-//     "grade_name": "Grade 8",
-//     "formats": [
-//       {
-//         "id": "f2b3c4d5-2222-3333-4444-555566677701",
-//         "subject_id": 1,
-//         "subject_name": "Myanmar",
-//         "date": "2026-11-10",
-//         "start_time": "09:00",
-//         "end_time": "12:00",
-//         "duration": 180,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "80",
-//         "is_active": true
-//       },
-//       {
-//         "id": "f2b3c4d5-2222-3333-4444-555566677702",
-//         "subject_id": 2,
-//         "subject_name": "English",
-//         "date": "2026-11-11",
-//         "start_time": "09:00",
-//         "end_time": "12:00",
-//         "duration": 180,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "80",
-//         "is_active": true
-//       },
-//       {
-//         "id": "f2b3c4d5-2222-3333-4444-555566677703",
-//         "subject_id": 3,
-//         "subject_name": "Mathematics",
-//         "date": "2026-11-12",
-//         "start_time": "09:00",
-//         "end_time": "12:00",
-//         "duration": 180,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "80",
-//         "is_active": true
-//       },
-//       {
-//         "id": "f2b3c4d5-2222-3333-4444-555566677704",
-//         "subject_id": 4,
-//         "subject_name": "Science",
-//         "date": "2026-11-13",
-//         "start_time": "09:00",
-//         "end_time": "11:00",
-//         "duration": 120,
-//         "max_mark": 75,
-//         "pass_mark": 30,
-//         "d_mark": "60",
-//         "is_active": true
-//       }
-//     ]
-//   },
-//   {
-//     "exam_type_id": "3",
-//     "grading_system_id": 1,
-//     "grade_id": 12,
-//     "grade_name": "Grade 11",
-//     "formats": [
-//       {
-//         "id": "c3d4e5f6-3333-4444-5555-666777888991",
-//         "subject_id": 1,
-//         "subject_name": "Myanmar",
-//         "date": "2026-12-01",
-//         "start_time": "09:00",
-//         "end_time": "12:00",
-//         "duration": 180,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "80",
-//         "is_active": true
-//       },
-//       {
-//         "id": "c3d4e5f6-3333-4444-5555-666777888992",
-//         "subject_id": 2,
-//         "subject_name": "English",
-//         "date": "2026-12-02",
-//         "start_time": "09:00",
-//         "end_time": "12:00",
-//         "duration": 180,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "80",
-//         "is_active": true
-//       },
-//       {
-//         "id": "c3d4e5f6-3333-4444-5555-666777888993",
-//         "subject_id": 3,
-//         "subject_name": "Mathematics",
-//         "date": "2026-12-03",
-//         "start_time": "09:00",
-//         "end_time": "12:00",
-//         "duration": 180,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "80",
-//         "is_active": true
-//       },
-//       {
-//         "id": "c3d4e5f6-3333-4444-5555-666777888994",
-//         "subject_id": 6,
-//         "subject_name": "Physics",
-//         "date": "2026-12-04",
-//         "start_time": "09:00",
-//         "end_time": "12:00",
-//         "duration": 180,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "80",
-//         "is_active": true
-//       },
-//       {
-//         "id": "c3d4e5f6-3333-4444-5555-666777888995",
-//         "subject_id": 7,
-//         "subject_name": "Chemistry",
-//         "date": "2026-12-05",
-//         "start_time": "09:00",
-//         "end_time": "12:00",
-//         "duration": 180,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "80",
-//         "is_active": true
-//       },
-//       {
-//         "id": "c3d4e5f6-3333-4444-5555-666777888996",
-//         "subject_id": 8,
-//         "subject_name": "Biology",
-//         "date": "2026-12-06",
-//         "start_time": "09:00",
-//         "end_time": "12:00",
-//         "duration": 180,
-//         "max_mark": 100,
-//         "pass_mark": 40,
-//         "d_mark": "80",
-//         "is_active": true
-//       }
-//     ]
-//   }
-// ];
 
 export const exam_setups = [
   {

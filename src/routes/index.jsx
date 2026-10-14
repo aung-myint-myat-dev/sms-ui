@@ -58,7 +58,7 @@ export const router = createBrowserRouter([
           },
           {
             path: 'exams',
-            Component: ExamsProduction
+            Component: Exams
           }
         ],
       },

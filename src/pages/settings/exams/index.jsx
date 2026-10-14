@@ -1,25 +1,8 @@
 import { useEffect, useMemo, useRef, useState, useDeferredValue } from "react";
-import { calculateDuration, getExamName, getGradingSystemName, getSubjectName, getSubjectsByGrade, TABS } from "./utlis";
-import { classes, exam_setups, exam_types, grades, grading_systems, studentMarks, subjects } from "./data";
+import { calculateDuration, getExamName, getGradingSystemName, getStudentName, getSubjectName, getSubjectsByGrade, hasReportCard, TABS } from "./utlis";
+import { classes, exam_setups, exam_types, grades, grading_systems, studentMarks, students, subjects } from "./data";
 import { Switch } from "./components/ui/Switch";
-import {
-  Check,
-  ChevronLeft,
-  ChevronRightSquare,
-  File,
-  FileText,
-  GraduationCap,
-  Minus,
-  NotebookPen,
-  Pencil,
-  PencilLineIcon,
-  Plus,
-  Save,
-  Search,
-  Settings,
-  Trash2,
-  X
-} from "lucide-react";
+import { Check, ChevronLeft, ChevronRightSquare, File, FileText, GraduationCap, NotebookPen, Pencil, PencilLineIcon, Plus, Save, Search, Settings, Trash2, X } from "lucide-react";
 
 export function Exams() {
   // Tab
@@ -46,102 +29,83 @@ export function Exams() {
   }
 
   // Stduetn Marks States, Actions And Handelers
-  const emptyStudentMarkForm = {
-    myanmar: '',
-    english: '',
-    math: '',
-    physic: '',
-    chemistry: '',
-    bio: '',
-  }
-  const emptyStudentMarkFormErrors = {
-    myanmar: '',
-    english: '',
-    math: '',
-    physic: '',
-    chemistry: '',
-    bio: '',
-  }
   const [selectedGradeId, setSelectedGradeId] = useState('')
   const [selectedClassId, setSelectedClassId] = useState('')
   const [selectedExamTypeId, setSelectedExamTypeId] = useState('')
   const [isEnteringMarks, setIsEnteringMarks] = useState(false)
   const [studentMarksForm, setStudentMarkForm] = useState({})
   const [marks, setMarks] = useState(studentMarks)
-  const [studentMarksFormErrors, setStudentMarkFormErrors] = useState({})
   const [searchQuery, setSearchQuery] = useState('')
   const deferredSearch = useDeferredValue(searchQuery)
-
   const handleEnterMarks = () => {
     const forms = {};
-    const errors = {};
     selectedStudentMarks.forEach((student) => {
-      forms[student.id] = {
-        ...emptyStudentMarkForm,
-        myanmar: student.myanmar ?? "",
-        english: student.english ?? "",
-        math: student.math ?? "",
-        physic: student.physic ?? "",
-        chemistry: student.chemistry ?? "",
-        bio: student.bio ?? "",
-      };
-
-      errors[student.id] = {
-        ...emptyStudentMarkFormErrors,
-      };
+      forms[student.student.id] = Object.fromEntries(
+        examSubjects.map((subject) => [
+          subject.subject_id,
+          student.mark?.subject_marks?.[subject.subject_id] ?? "",
+        ])
+      );
     });
 
     setStudentMarkForm(forms);
-    setStudentMarkFormErrors(errors);
-
     setIsEnteringMarks(true);
   };
   const handleCancelMarks = () => {
     setStudentMarkForm({});
-    setStudentMarkFormErrors({});
     setIsEnteringMarks(false);
   };
-  const handleStudentMarkChange = (studentId, event) => {
-    const { name, value } = event.target
-    if (value !== "" && (!/^\d+$/.test(value) || Number(value) > 100)) {
+  const handleStudentMarkChange = (studentId, subjectId, maxMark, event) => {
+    const { value } = event.target
+    if (value !== "" && (!/^\d+$/.test(value) || Number(value) > Number(maxMark))) {
       return;
     }
     setStudentMarkForm((prev) => ({
       ...prev,
       [studentId]: {
         ...prev[studentId],
-        [name]: value,
+        [subjectId]: value,
       }
     }))
   }
-  const calculateTotalMarks = (studentId) => {
-    const marks = studentMarksForm[studentId];
-    if (!marks) return 0;
-    const subjects = ["myanmar", "english", "math", "physic", "chemistry", "bio",];
-    return subjects.reduce((total, subject) => {
-      return total + Number(marks[subject] || 0);
-    }, 0);
-  };
   const handleSaveStudentMarks = () => {
-    // Save marks api call here
-
-    // Demo action
-    setMarks((prev) => prev.map((student) => {
-      const marks = studentMarksForm[student.id]
-      if (!marks) return student;
+    const updatedMarks = selectedStudentMarks.map(({ student, mark }) => {
+      const activeSubjectMarks = Object.fromEntries(
+        examSubjects.map((subject) => {
+          const value = studentMarksForm[student.id]?.[subject.subject_id] ?? "";
+          return [subject.subject_id, value === "" ? null : Number(value)];
+        })
+      );
+      const subjectMarks = { ...mark?.subject_marks, ...activeSubjectMarks };
+      const total = Object.values(activeSubjectMarks).reduce(
+        (sum, value) => sum + Number(value ?? 0),
+        0
+      );
 
       return {
-        ...student,
-        ...Object.fromEntries(
-          Object.entries(marks).map(([subject, value]) => [
-            subject,
-            value === "" ? null : Number(value)
-          ])
-        ),
-        total: calculateTotalMarks(student.id),
-      }
-    }))
-    // After save successfully
+        ...mark,
+        id: mark?.id ?? crypto.randomUUID(),
+        student_id: student.id,
+        class_id: Number(selectedClassId),
+        exam_type_id: Number(selectedExamTypeId),
+        exam_setup_id: selectedExamSetup.id,
+        subject_marks: subjectMarks,
+        total,
+      };
+    });
+
+    setMarks((prev) => {
+      const updatedByStudentId = new Map(
+        updatedMarks.map((mark) => [Number(mark.student_id), mark])
+      );
+      const next = prev.filter((mark) => !(
+        Number(mark.class_id) === Number(selectedClassId) &&
+        Number(mark.exam_type_id) === Number(selectedExamTypeId) &&
+        String(mark.exam_setup_id) === String(selectedExamSetup.id) &&
+        updatedByStudentId.has(Number(mark.student_id))
+      ));
+      return [...next, ...updatedMarks];
+    });
     handleCancelMarks();
   }
 
@@ -188,6 +152,10 @@ export function Exams() {
   }
   const handleDelteExamType = (exam) => {
     // Delete exam type api call here
+    if (allExamSetUps.some((setup) => Number(setup.exam_type_id) === Number(exam.id))) {
+      window.alert('Delete the exam setups using this exam type before deleting it.');
+      return;
+    }
     const examtypes = examTypes.filter((item) => item.id !== exam.id)
     setExamTypes(examtypes)
     console.log(exam)
@@ -249,7 +217,6 @@ export function Exams() {
   const [showGradingSystemActionForm, setShowGradingSystemActionForm] = useState(false)
   const [editingGradingSystem, setEditingGradingSystem] = useState(null)
   const lastRange = gradingSystemForm.ranges.at(-1)
-
   const isRangeIncomplete = !lastRange?.grading.trim() || lastRange?.from === '' || lastRange?.to === ''
   const makeEmptyGradingForm = () => ({ name: '', max_mark: '', pass_mark: '', ranges: [{ id: crypto.randomUUID(), grading: '', from: '', to: '' }] });
   const validateGrading = () => {
@@ -304,6 +271,10 @@ export function Exams() {
     handleCloseGradingSystemActionForm();
   }
   const handleDleteGradingSystem = (id) => {
+    if (allExamSetUps.some((setup) => Number(setup.grading_system_id) === Number(id))) {
+      window.alert('Delete or update the exam setups using this grading system before deleting it.');
+      return;
+    }
     const systems = gradingSystems.filter((item) => item.id !== id)
     setGradingSystems(systems)
     handleCloseGradingSystemActionForm();
@@ -376,7 +347,9 @@ export function Exams() {
   const [showSetUpActionForm, setShowSetUpActionForm] = useState(false)
   const [setUpForm, setSetUpForm] = useState(emptySetUpForm)
   const [editingSetUp, setEditingSetUp] = useState(null)
-
+  const [allExamSetUps, setAllExamSetUps] = useState(() => exam_setups.map((item, index) => ({
+    ...item, id: item.id ?? `seed-${index}`, formats: item.formats.map(f => ({ ...f }))
+  })));
   const handleFormatChange = (id, e) => {
     const { name, value } = e.target
     setSetUpForm((prev) => ({
@@ -516,7 +489,18 @@ export function Exams() {
       setUpForm.formats.every(f => Number(f.max_mark) >= 0 && Number(f.pass_mark) >= 0 &&
         Number(f.pass_mark) <= Number(f.max_mark) && (!f.start_time || !f.end_time || f.end_time > f.start_time));
     if (!valid) window.alert('Select an exam type and check subject marks and times.');
-    return Boolean(valid);
+    if (!valid) return false;
+
+    const duplicateSetUp = allExamSetUps.some((setup) =>
+      setup.id !== editingSetUp?.id &&
+      Number(setup.grade_id) === Number(setUpForm.grade_id) &&
+      Number(setup.exam_type_id) === Number(setUpForm.exam_type_id)
+    );
+    if (duplicateSetUp) {
+      window.alert('An exam setup already exists for this grade and exam type.');
+      return false;
+    }
+    return true;
   };
   const handleDeleteSetUp = (id) => {
     if (!window.confirm('Delete this exam setup?')) return;
@@ -534,32 +518,62 @@ export function Exams() {
     return selectedGradeId ? classes.filter(c => c.grade_id === Number(selectedGradeId)) : [];
   }, [selectedGradeId])
 
-  const selectedStudentMarks = useMemo(() => {
-    if (selectedClassId && selectedExamTypeId) {
-      return marks.filter((mark) =>
-        mark.class_id === Number(selectedClassId) &&
-        mark.exam_id === Number(selectedExamTypeId)
+  const selectedStudents = useMemo(() => {
+    const selectedClass = classes.find((item) =>
+      Number(item.id) === Number(selectedClassId) &&
+      Number(item.grade_id) === Number(selectedGradeId)
+    );
+    return selectedClass
+      ? students.filter((student) => Number(student.class_id) === Number(selectedClass.id))
+      : ["No students"];
+  }, [selectedClassId, selectedGradeId])
+
+  const availableExamSetups = useMemo(() => {
+    if (!selectedGradeId) return [];
+    return allExamSetUps.filter((setup) =>
+      Number(setup.grade_id) === Number(selectedGradeId));
+  }, [selectedGradeId, allExamSetUps])
+
+  const availableExamTypes = useMemo(() => {
+    const examTypeIds = new Set(
+      availableExamSetups.map((setup) => Number(setup.exam_type_id))
+    )
+    return examTypes.filter((exam) => exam.is_active && examTypeIds.has(Number(exam.id)))
+  }, [availableExamSetups, examTypes])
+
+  const selectedExamSetup = selectedExamTypeId ? availableExamSetups.find((setup) => Number(setup.exam_type_id) === Number(selectedExamTypeId)) ?? null : null;
+  const selectedExamSetupId = selectedExamSetup?.id;
+  const examSubjects = selectedExamSetup?.formats.filter((format) => format.is_active) ?? [];
+
+  const selectedStudentMarks = !selectedClassId || !selectedExamTypeId || !selectedExamSetupId
+    ? []
+    : selectedStudents.map((student) => {
+      const mark = marks.find((item) =>
+        Number(item.student_id) === Number(student.id) &&
+        Number(item.class_id) === Number(selectedClassId) &&
+        Number(item.exam_type_id) === Number(selectedExamTypeId) &&
+        String(item.exam_setup_id) === String(selectedExamSetupId)
+      ) ?? null;
+      const total = mark?.total ?? Object.values(mark?.subject_marks ?? {}).reduce(
+        (sum, value) => sum + Number(value ?? 0),
+        0
       );
-    }
-    return [];
-  }, [marks, selectedClassId, selectedExamTypeId]);
-
-  const filteredStudentMarks = useMemo(() => {
-    const q = deferredSearch.trim().toLocaleLowerCase();
-    return q ? selectedStudentMarks.filter(mark =>
-      String(mark.student_name ?? '').toLocaleLowerCase().includes(q)) : selectedStudentMarks;
-  }, [selectedStudentMarks, deferredSearch]);
-
-  const studentRanks = useMemo(() => {
-    const ranked = [...selectedStudentMarks].sort((a, b) => Number(b.total ?? 0) - Number(a.total ?? 0));
-    const ranks = new Map();
-    ranked.forEach((student, index) => {
-      const previous = ranked[index - 1];
-      ranks.set(student.id, previous && Number(previous.total ?? 0) === Number(student.total ?? 0)
-        ? ranks.get(previous.id) : index + 1);
+      return { student, mark, total };
     });
-    return ranks;
-  }, [selectedStudentMarks]);
+
+  const searchTerm = deferredSearch.trim().toLocaleLowerCase();
+  const filteredStudentMarks = searchTerm ? selectedStudentMarks.filter(({ student }) => getStudentName(student.id).toLocaleLowerCase().includes(searchTerm)) : selectedStudentMarks;
+  const sortedStudentMarks = useMemo(() => {
+    return [...filteredStudentMarks].sort((a,b) => Number(b.total) - Number(a.total))
+  }, [filteredStudentMarks])
+  const rankedStudents = [...selectedStudentMarks].sort((a, b) => Number(b.total) - Number(a.total));
+
+  const studentRanks = new Map();
+  rankedStudents.forEach((student, index) => {
+    const previous = rankedStudents[index - 1];
+    studentRanks.set(student.student.id, previous && Number(previous.total) === Number(student.total)
+      ? studentRanks.get(previous.student.id) : index + 1);
+  });
 
 
   // Exam Type Edit
@@ -582,9 +596,6 @@ export function Exams() {
     }
   }, [editingSetUp])
 
-  const [allExamSetUps, setAllExamSetUps] = useState(() => exam_setups.map((item, index) => ({
-    ...item, id: item.id ?? `seed-${index}`, formats: item.formats.map(f => ({ ...f }))
-  })));
   useEffect(() => {
     if (selectedSetUpGrade) {
       setExamSetUps(allExamSetUps.filter(item => Number(item.grade_id) === Number(selectedSetUpGrade.id)));
@@ -641,6 +652,7 @@ export function Exams() {
                     setSelectedGradeId(e.target.value)
                     setSelectedClassId("")
                     setSelectedExamTypeId("")
+                    setSearchQuery("")
                   }}
                   name="grade"
                   id="grade"
@@ -658,7 +670,10 @@ export function Exams() {
                 <label htmlFor="class" className="font-normal text-[14px]">Class</label>
                 <select
                   value={selectedClassId ?? ""}
-                  onChange={(e) => setSelectedClassId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedClassId(e.target.value)
+                    setSearchQuery("")
+                  }}
                   name="class"
                   id="class"
                   className="text-[14px] font-normal text-[#00000099] h-[39px] border border-[#0000001F] rounded-[8px] focus:outline-none px-3">
@@ -675,12 +690,15 @@ export function Exams() {
                 <label htmlFor="exam_type" className="font-normal text-[14px]">Exam Type</label>
                 <select
                   value={selectedExamTypeId ?? ""}
-                  onChange={(e) => setSelectedExamTypeId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedExamTypeId(e.target.value)
+                    setSearchQuery("")
+                  }}
                   name="exam_type"
                   id="exam_type"
                   className="text-[14px] font-normal text-[#00000099] h-[39px] border border-[#0000001F] rounded-[8px] focus:outline-none px-3">
                   <option value="" disabled>Select exam type</option>
-                  {examTypes.filter(exam => exam.is_active).map((exam_type) => (
+                  {availableExamTypes.map((exam_type) => (
                     <option className="text-black" value={exam_type.id} key={exam_type.id}>{exam_type.name}</option>
                   ))}
                 </select>
@@ -745,12 +763,9 @@ export function Exams() {
                     <colgroup>
                       <col style={{ width: "5%" }} />
                       <col style={{ width: "26%" }} />
-                      <col style={{ width: "6%" }} />
-                      <col style={{ width: "6%" }} />
-                      <col style={{ width: "6%" }} />
-                      <col style={{ width: "6%" }} />
-                      <col style={{ width: "6%" }} />
-                      <col style={{ width: "6%" }} />
+                      {examSubjects.map((subject) => (
+                        <col key={subject.id} style={{ width: "6%" }} />
+                      ))}
                       <col style={{ width: "7%" }} />
                       {!isEnteringMarks && (
                         <>
@@ -763,12 +778,9 @@ export function Exams() {
                       <tr className="bg-[#A8A8A833] border-b-2 border-[#0000001F]">
                         <th className="text-[14px] font-[500] py-[13px] px-2 leading-none">No</th>
                         <th className="text-[14px] text-left font-[500] py-[13px] px-2 leading-none">Student Name</th>
-                        <th className="text-[14px] font-[500] py-[13px] px-2 leading-none">Myanmar</th>
-                        <th className="text-[14px] font-[500] py-[13px] px-2 leading-none">English</th>
-                        <th className="text-[14px] font-[500] py-[13px] px-2 leading-none">Mathematics</th>
-                        <th className="text-[14px] font-[500] py-[13px] px-2 leading-none">Physics</th>
-                        <th className="text-[14px] font-[500] py-[13px] px-2 leading-none">Chemistry</th>
-                        <th className="text-[14px] font-[500] py-[13px] px-2 leading-none">Bio</th>
+                        {examSubjects.map((subject) => (
+                          <th key={subject.id} className="text-[14px] font-[500] py-[13px] px-2 leading-none">{getSubjectName(subject.subject_id)}</th>
+                        ))}
                         <th className="text-[14px] font-[500] py-[13px] px-2 leading-none">Total</th>
                         {!isEnteringMarks && (
                           <>
@@ -780,110 +792,60 @@ export function Exams() {
                     </thead>
 
                     <tbody>
-                      {filteredStudentMarks.map((mark) => {
-                        const examType = examTypes.find((type) => Number(type.id) === Number(mark.exam_id))
-                        const hasReport = examType?.has_report_card
-
+                      {sortedStudentMarks.map(({ student, mark, total }, index) => {
+                        const hasreportcard = hasReportCard(selectedExamTypeId, examTypes)
                         return (
-                          <tr key={mark.id} className="border-b border-[#0000001F]">
-                            {/* Id */}
-                            <td className="font-normal text-[14px] py-[10px] px-2 text-center">{mark.id}</td>
+                          <tr key={student.id} className="border-b border-[#0000001F]">
+                            <td className="font-normal text-[14px] py-[10px] px-2 text-center">{index + 1}</td>
+                            <td className="font-normal text-[14px] py-[10px] px-2 text-left">{getStudentName(student.id)}</td>
 
-                            {/* Student Name */}
-                            <td className="font-normal text-[14px] py-[10px] px-2 text-left">{mark.student_name}</td>
+                            {examSubjects.map((subject) => {
+                              const subjectMarks = isEnteringMarks
+                                ? studentMarksForm[student.id] ?? {}
+                                : mark?.subject_marks ?? {};
+                              return (
+                                <td key={subject.id} className="font-normal text-[14px] py-[10px] px-2 text-center">
+                                  {isEnteringMarks ? (
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max={subject.max_mark}
+                                      disabled={!isEnteringMarks}
+                                      value={subjectMarks[subject.subject_id] ?? ""}
+                                      onChange={(event) =>
+                                        handleStudentMarkChange(
+                                          student.id,
+                                          subject.subject_id,
+                                          subject.max_mark,
+                                          event
+                                        )
+                                      }
+                                      className="border border-[#0000001F] text-center rounded-[8px] h-[32px] w-[98px] px-2"
+                                    />
+                                  ) : (subjectMarks[subject.subject_id] ?? '-')}
+                                </td>
+                              );
+                            })}
 
-                            {/* Myanmar */}
-                            <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                              {isEnteringMarks ? (
-                                <input
-                                  name="myanmar"
-                                  value={studentMarksForm[mark.id]?.myanmar ?? ""}
-                                  onChange={(e) => handleStudentMarkChange(mark.id, e)}
-                                  className="border border-[#0000001F] text-center rounded-[8px] h-[32px] w-[98px] px-2" type="text" />
-                              ) : mark.myanmar ?? '-'}
-                            </td>
-
-                            {/* English */}
-                            <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                              {isEnteringMarks ? (
-                                <input
-                                  type="text"
-                                  name="english"
-                                  value={studentMarksForm[mark.id]?.english ?? ""}
-                                  onChange={(e) => handleStudentMarkChange(mark.id, e)}
-                                  className="border border-[#0000001F] text-center rounded-[8px] h-[32px] w-[98px] px-2"
-                                />
-                              ) : mark.english ?? '-'}
-                            </td>
-
-                            {/* Math */}
-                            <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                              {isEnteringMarks ? (
-                                <input
-                                  name="math"
-                                  value={studentMarksForm[mark.id]?.math ?? ""}
-                                  onChange={(e) => handleStudentMarkChange(mark.id, e)}
-                                  className="border border-[#0000001F] text-center rounded-[8px] h-[32px] w-[98px] px-2" type="text" />
-                              ) : mark.math ?? '-'}
-                            </td>
-
-                            {/* Physic */}
-                            <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                              {isEnteringMarks ? (
-                                <input
-                                  name="physic"
-                                  value={studentMarksForm[mark.id]?.physic ?? ""}
-                                  onChange={(e) => handleStudentMarkChange(mark.id, e)}
-                                  className="border border-[#0000001F] text-center rounded-[8px] h-[32px] w-[98px] px-2" type="text" />
-                              ) : mark.physic ?? '-'}
-                            </td>
-
-                            {/* Chemistry */}
-                            <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                              {isEnteringMarks ? (
-                                <input
-                                  name="chemistry"
-                                  value={studentMarksForm[mark.id]?.chemistry ?? ""}
-                                  onChange={(e) => handleStudentMarkChange(mark.id, e)}
-                                  className="border border-[#0000001F] text-center rounded-[8px] h-[32px] w-[98px] px-2" type="text" />
-                              ) : mark.chemistry ?? '-'}
-                            </td>
-
-                            {/* Bio */}
-                            <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                              {isEnteringMarks ? (
-                                <input
-                                  name="bio"
-                                  value={studentMarksForm[mark.id]?.bio ?? ""}
-                                  onChange={(e) => handleStudentMarkChange(mark.id, e)}
-                                  className="border border-[#0000001F] text-center rounded-[8px] h-[32px] w-[98px] px-2" type="text" />
-                              ) : mark.bio ?? '-'}
-                            </td>
-
-                            {/* Total */}
                             <td className="font-normal text-[14px] py-[10px] px-2 text-center">
                               {isEnteringMarks ? (
                                 <input
                                   type="text"
-                                  value={calculateTotalMarks(mark.id)}
+                                  name="total"
+                                  value={examSubjects.reduce((sum, subject) => sum + Number(studentMarksForm[student.id]?.[subject.subject_id] || 0), 0) ?? total}
                                   readOnly
                                   className="border border-[#0000001F] text-center rounded-[8px] h-[32px] w-[74px] px-2 bg-[#D9D9D980]"
                                 />
                               ) : (
-                                mark.total ?? 0
+                                total ?? 0
                               )}
                             </td>
-
                             {!isEnteringMarks && (
                               <>
-                                {/* Rank */}
-                                <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                                  {studentRanks.get(mark.id) ?? '-'}
-                                </td>
-
+                                <td className="p-3 text-center">{studentRanks.get(student.id) ?? "-"}</td>
                                 {/* Report Card */}
                                 <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                                  {hasReport ? (
+                                  {hasreportcard ? (
                                     <button className="cursor pointer flex items-center gap-1 bg-[#228B221A] rounded-[8px] py-1 px-2 mx-auto hover:bg-[#228B2226] transition-colors">
                                       <File className="size-[14px] text-[#228B22]" />
                                       <span className="font-[500] text-[12px] text-[#228B22]">Download PDF</span>
@@ -944,50 +906,14 @@ export function Exams() {
                 </thead>
 
                 <tbody>
-
-                  {/* Store exam type form row */}
-                  {!editingExamType && (
-                    <tr className="border-b border-[#0000001F]">
-                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">-</td>
-                      <td className="font-normal text-[14px] py-[10px] px-2 text-left">
-                        <input
-                          type="text"
-                          value={examTypeFormDate.name ?? ""}
-                          name="name"
-                          onChange={(e) => handleChange(e, setExamTypeFormData, setExamTypeFormErrors)}
-                          placeholder="Enter exam name (e.g. Mid-term)"
-                          className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
-                        />
-                      </td>
-                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                        <input
-                          type="checkbox"
-                          name="has_report_card"
-                          checked={examTypeFormDate.has_report_card ? true : false}
-                          onChange={(e) => handleToggleCheck(e, setExamTypeFormData)}
-                          className="size-[16px] accent-[#228B22] cursor-pointer"
-                        />
-                      </td>
-                      <td>
-                        <button
-                          onClick={handleSaveExamType}
-                          className="flex items-center justify-center gap-1 bg-[#228B22] hover:bg-[#1e7b1e] text-white rounded-[8px] py-1.5 px-3 mx-auto text-[12px] font-semibold transition-colors cursor-pointer"
-                        >
-                          <Save className="size-[14px]" />
-                          <span>Save Exam</span>
-                        </button>
-                      </td>
-                    </tr>
-                  )}
-
                   {/* Exisiting exam types table */}
                   {examTypes.length > 0 ? (
-                    examTypes.map((exam) => (
+                    examTypes.map((exam, index) => (
                       <tr key={exam.id} className="border-b border-[#0000001F]">
 
                         {/* ID Column */}
                         <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                          {exam.id}
+                          {index + 1}
                         </td>
 
                         {/* Exam Name Column */}
@@ -1071,6 +997,42 @@ export function Exams() {
                       </td>
                     </tr>
                   )}
+
+                  {/* Store exam type form row */}
+                  {!editingExamType && (
+                    <tr className="border-b border-[#0000001F]">
+                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">-</td>
+                      <td className="font-normal text-[14px] py-[10px] px-2 text-left">
+                        <input
+                          type="text"
+                          value={examTypeFormDate.name ?? ""}
+                          name="name"
+                          onChange={(e) => handleChange(e, setExamTypeFormData, setExamTypeFormErrors)}
+                          placeholder="Enter exam name (e.g. Mid-term)"
+                          className="border border-[#0000001F] rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none focus:border-[#228B22]"
+                        />
+                      </td>
+                      <td className="font-normal text-[14px] py-[10px] px-2 text-center">
+                        <input
+                          type="checkbox"
+                          name="has_report_card"
+                          checked={examTypeFormDate.has_report_card ? true : false}
+                          onChange={(e) => handleToggleCheck(e, setExamTypeFormData)}
+                          className="size-[16px] accent-[#228B22] cursor-pointer"
+                        />
+                      </td>
+                      <td>
+                        <button
+                          onClick={handleSaveExamType}
+                          disabled={!examTypeFormDate.name.trim()}
+                          className="flex w-[180px] items-center justify-center gap-1 bg-[#228B22] hover:bg-[#1e7b1e] text-white rounded-[8px] py-1.5 px-3 mx-auto disabled:bg-[#228b229d] text-[12px] font-semibold transition-colors cursor-pointer"
+                        >
+                          <Plus className="size-[14px]" />
+                          <span>Save Exam</span>
+                        </button>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
 
               </table>
@@ -1123,7 +1085,7 @@ export function Exams() {
                         onChange={(e) => handleChange(e, setGradingSystemForm)}
                         placeholder="Enter exam maximum marks ..."
                         id="max_mark"
-                        type="text"
+                        type="number"
                         className="border border-[#0000001F] rounded-[8px] w-full py-2 px-4 font-normal text-[14px] focus:outline-none bg-white" />
                     </div>
 
@@ -1135,7 +1097,7 @@ export function Exams() {
                         value={gradingSystemForm.pass_mark ?? ""}
                         onChange={(e) => handleChange(e, setGradingSystemForm)}
                         placeholder="Enter exam pass marks ..."
-                        type="text"
+                        type="number"
                         className="border border-[#0000001F] rounded-[8px] w-full py-2 px-4 font-normal text-[14px] focus:outline-none bg-white" />
                     </div>
 
@@ -1188,7 +1150,7 @@ export function Exams() {
                         <tbody>
                           {gradingSystemForm.ranges?.map((range, index) => (
                             <tr key={range.id} className="border-b border-[#0000001F]">
-                              <td className="font-normal text-[14px] py-[10px] px-2 text-center">{range.id}</td>
+                              <td className="font-normal text-[14px] py-[10px] px-2 text-center">{index + 1}</td>
                               <td className="font-normal text-[14px] py-[10px] px-2 text-left">
                                 <input
                                   type="text"
@@ -1201,7 +1163,7 @@ export function Exams() {
                               </td>
                               <td className="font-normal text-[14px] py-[10px] px-2 text-left">
                                 <input
-                                  type="text"
+                                  type="number"
                                   value={range.from ?? ""}
                                   name="from"
                                   onChange={(e) => handleRangeChange(range.id, e)}
@@ -1211,7 +1173,7 @@ export function Exams() {
                               </td>
                               <td className="font-normal text-[14px] py-[10px] px-2 text-left">
                                 <input
-                                  type="text"
+                                  type="number"
                                   value={range.to ?? ""}
                                   name="to"
                                   onChange={(e) => handleRangeChange(range.id, e)}
@@ -1220,18 +1182,12 @@ export function Exams() {
                                 />
                               </td>
                               <td>
-                                {index === gradingSystemForm.ranges.length - 1 ? (
+                                {index === gradingSystemForm.ranges.length - 1 && (
                                   <button
                                     onClick={handleAddRange}
                                     disabled={isRangeIncomplete}
                                     className={`size-[32.5px] cursor-pointer text-white rounded-full flex items-center justify-center ${isRangeIncomplete ? 'bg-[#228b2292]' : 'bg-[#228B22]'}`}>
                                     <Plus />
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => handleRemoveRange(range.id)}
-                                    className={`size-[32.5px] cursor-pointer text-white rounded-full flex items-center justify-center bg-[#FF0000]`}>
-                                    <Minus />
                                   </button>
                                 )}
                               </td>
@@ -1460,6 +1416,7 @@ export function Exams() {
                         </thead>
 
                         <tbody>
+                          {/* Set Up Format Form Row */}
                           {setUpForm.formats.map((format, index) => (
                             <tr key={format.id} className="border-b border-[#0000001F]">
                               <td className="font-normal text-[14px] py-[10px] px-2 text-center">{index + 1}</td>
@@ -1567,7 +1524,7 @@ export function Exams() {
                           <div key={setUp.id} className="border border-[#0000001F] rounded-[8px] p-4 flex-1 flex flex-col gap-3">
                             {/* Set Up Title And Actions Buttons */}
                             <div className="flex items-center justify-between">
-                              <h1 className="font-semibold text-[18px]">{`${getExamName(setUp.exam_type_id)} / (${getGradingSystemName(setUp.grading_system_id)})`}</h1>
+                              <h1 className="font-semibold text-[18px]">{`${getExamName(setUp.exam_type_id, examTypes)} / (${getGradingSystemName(setUp.grading_system_id, gradingSystems) || 'No grading system'})`}</h1>
 
                               <div className="flex items-center gap-2">
                                 {/* Edit Button */}
