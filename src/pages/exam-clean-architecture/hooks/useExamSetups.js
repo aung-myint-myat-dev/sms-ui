@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { EMPTY_SET_UP_FORM } from "../constants/examConstants";
 import { exam_setups, grades, subjects } from "../data/data";
 import { calculateDuration, getSubjectsByGrade } from "../utils/examUtils";
+import { validateExamSetUpForm } from "../utils/validation";
 
 export function useExamSetups() {
   const [selectedSetUpGrade, setSelectedSetUpGrade] = useState(null);
@@ -139,7 +140,12 @@ export function useExamSetups() {
   };
 
   const handleSaveSetUp = () => {
-    if (!validateSetUp()) return;
+    const validation = validateExamSetUpForm(setUpForm)
+
+    if(!validation.isValid) {
+      console.log(validation.errors)
+      return;
+    }
     const payload = {
       ...setUpForm,
       id: crypto.randomUUID(),
@@ -163,7 +169,11 @@ export function useExamSetups() {
   };
 
   const handleUpdateSetUp = () => {
-    if (!validateSetUp()) return;
+    const validation = validateExamSetUpForm(setUpForm)
+    if(!validation.isValid) {
+      console.log(validation.errors)
+      return;
+    }
     setAllExamSetUps((previous) => previous.map((item) => item.id === editingSetUp.id
       ? {
         ...setUpForm,
