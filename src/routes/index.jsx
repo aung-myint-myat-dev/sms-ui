@@ -8,6 +8,7 @@ import { BankDetail } from '../pages/student-bank/show';
 import { PolicyActionForm } from '../pages/settings/policies/action';
 import { SchoolProfile } from '../pages/settings/school-profile';
 import Exams from '../pages/exam-clean-architecture/Exams';
+import { AcademicYears } from '../pages/settings/academic-years-clean-architecture/Index';
 import Policies from '../pages/settings/policies-clean-architecture/Policies';
 // import { Exams } from '../pages/settings/exams';
 // import { ExamsProduction } from '../pages/settings/exams/exam.production';
@@ -57,6 +58,10 @@ export const router = createBrowserRouter([
                 Component: SchoolProfile
               },
             ]
+          },
+          {
+            path: 'academic-years',
+            Component: AcademicYears,
           },
           {
             path: 'exams',
