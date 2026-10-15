@@ -160,7 +160,6 @@ export function ExamSetupsTab(props) {
                             const isOverlapingTime = isExamTimeOverlapping(format, setUpForm.formats)
                             const inputClassName = `border rounded-[4px] h-[36px] w-full max-w-[414px] px-3 text-[14px] focus:outline-none ${isOverlapingTime ? "border-red-500 focus:border-red-500" : "border-[#0000001F] focus:border-[#228B22]"}`;
 
-                            console.log(isOverlapingTime)
                             return (
                               <tr key={format.id} className="border-b border-[#0000001F]">
                                 <td className="font-normal text-[14px] py-[10px] px-2 text-center">{index + 1}</td>
@@ -341,7 +340,7 @@ export function ExamSetupsTab(props) {
                                         {format.is_active ? format.end_time : '-'}
                                       </td>
                                       <td className="font-normal text-[14px] py-[10px] px-2 text-center">
-                                        {format.is_active ? `${format.duration} min` : ''}
+                                        {format.is_active ? `${format.duration} min` : '-'}
                                       </td>
                                       <td className="font-normal text-[14px] py-[10px] px-2 text-center">
                                         {format.is_active ? format.max_mark : '-'}

@@ -118,7 +118,8 @@ export function GradingSystemsTab(props) {
                   </div>
 
                   {/* Ragnes Form Table */}
-                  <div className="flex items-start gap-3">
+                  <div className="flex flex-col items-start gap-3">
+                    {/* <p className="text-xs text-red-500">Error message</p> */}
                     {/* Table Form */}
                     <div className="border border-[#0000001F] rounded-tl-[8px] rounded-tr-[8px] overflow-hidden">
                       <table className="w-full table-fixed">
