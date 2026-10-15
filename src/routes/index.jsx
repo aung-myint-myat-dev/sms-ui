@@ -8,7 +8,7 @@ import { Policies } from '../pages/settings/policies';
 import { PolicyActionForm } from '../pages/settings/policies/action';
 import { SchoolProfile } from '../pages/settings/school-profile';
 import Exams from '../pages/exam-clean-architecture/Exams';
-import { AcademicYears } from '../pages/settings/academic-years';
+import { AcademicYears } from '../pages/settings/academic-years-clean-architecture/Index';
 
 export const router = createBrowserRouter([
   {
